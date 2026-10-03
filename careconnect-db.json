@@ -1,0 +1,264 @@
+{
+  "senior": {
+    "id": "senior-1",
+    "name": "Eleanor Vance",
+    "age": 78,
+    "residence": "Pinecrest Senior Living, Apt 4B, Seattle, WA",
+    "phone": "(206) 555-0149",
+    "preferredWakeTime": "08:00 AM",
+    "avatar": "👵",
+    "lastActive": "8:28 AM Today"
+  },
+  "status": {
+    "current": "ok",
+    "badge": "🟢 Everything OK",
+    "lastCheckIn": "2026-10-03T08:15:00.000Z",
+    "lastCheckInDisplay": "Today at 8:15 AM",
+    "message": "Eleanor checked in at 8:15 AM. She confirmed she is awake and doing well.",
+    "alertDetails": null
+  },
+  "todayChecklist": {
+    "medications": [
+      {
+        "id": "med-1",
+        "name": "Lisinopril",
+        "dosage": "10 mg",
+        "purpose": "Morning Blood Pressure",
+        "time": "08:30 AM",
+        "taken": true,
+        "takenAt": "8:25 AM",
+        "tag": "Cardiovascular",
+        "icon": "pill"
+      },
+      {
+        "id": "med-2",
+        "name": "Vitamin D3 & Calcium",
+        "dosage": "1000 IU / 500 mg",
+        "purpose": "Bone & Joint Support",
+        "time": "01:00 PM",
+        "taken": false,
+        "takenAt": null,
+        "tag": "Supplement",
+        "icon": "sun"
+      },
+      {
+        "id": "med-3",
+        "name": "Atorvastatin",
+        "dosage": "20 mg",
+        "purpose": "Evening Cholesterol / Heart",
+        "time": "08:00 PM",
+        "taken": false,
+        "takenAt": null,
+        "tag": "Lipids",
+        "icon": "heart"
+      },
+      {
+        "id": "med-4",
+        "name": "Metformin",
+        "dosage": "500 mg",
+        "purpose": "Evening Blood Sugar Control",
+        "time": "08:00 PM",
+        "taken": false,
+        "takenAt": null,
+        "tag": "Endocrine",
+        "icon": "activity"
+      }
+    ],
+    "appointment": {
+      "id": "apt-1",
+      "doctor": "Dr. Sarah Smith, M.D.",
+      "specialty": "Cardiology & General Geriatrics",
+      "clinic": "Metro Health Center, Suite 302",
+      "time": "4:00 PM Today",
+      "notes": "Bring recent 7-day blood pressure and glucose log. Routine 6-month checkup.",
+      "driver": "David (Son) picking up at 3:15 PM",
+      "phone": "(206) 555-0144",
+      "confirmed": true
+    },
+    "vitalsLoggedToday": {
+      "bloodPressure": {
+        "systolic": 122,
+        "diastolic": 78,
+        "unit": "mmHg",
+        "loggedAt": "8:28 AM",
+        "status": "normal",
+        "label": "Optimal Range"
+      },
+      "temperature": {
+        "value": 98.4,
+        "unit": "°F",
+        "loggedAt": "8:28 AM",
+        "status": "normal",
+        "label": "Normal"
+      },
+      "bloodSugar": {
+        "value": 106,
+        "unit": "mg/dL",
+        "type": "Fasting",
+        "loggedAt": "8:28 AM",
+        "status": "normal",
+        "label": "Normal Fasting"
+      },
+      "heartRate": {
+        "value": 72,
+        "unit": "bpm",
+        "loggedAt": "8:28 AM",
+        "status": "normal",
+        "label": "Resting Normal"
+      }
+    }
+  },
+  "vitalsHistory": [
+    {
+      "date": "Sep 27",
+      "sys": 126,
+      "dia": 82,
+      "sugar": 112,
+      "hr": 74
+    },
+    {
+      "date": "Sep 28",
+      "sys": 128,
+      "dia": 84,
+      "sugar": 115,
+      "hr": 76
+    },
+    {
+      "date": "Sep 29",
+      "sys": 122,
+      "dia": 80,
+      "sugar": 106,
+      "hr": 71
+    },
+    {
+      "date": "Sep 30",
+      "sys": 124,
+      "dia": 80,
+      "sugar": 110,
+      "hr": 73
+    },
+    {
+      "date": "Oct 01",
+      "sys": 130,
+      "dia": 82,
+      "sugar": 118,
+      "hr": 75
+    },
+    {
+      "date": "Oct 02",
+      "sys": 120,
+      "dia": 78,
+      "sugar": 104,
+      "hr": 70
+    },
+    {
+      "date": "Oct 03 (Today)",
+      "sys": 122,
+      "dia": 78,
+      "sugar": 106,
+      "hr": 72
+    }
+  ],
+  "activityTimeline": [
+    {
+      "id": "act-1",
+      "timestamp": "8:28 AM",
+      "type": "vitals",
+      "actor": "Eleanor Vance",
+      "title": "Morning Vitals Recorded",
+      "description": "BP: 122/78 mmHg, Glucose: 106 mg/dL, Temp: 98.4°F, Heart Rate: 72 bpm. All values in normal range.",
+      "severity": "normal"
+    },
+    {
+      "id": "act-2",
+      "timestamp": "8:25 AM",
+      "type": "medication",
+      "actor": "Eleanor Vance",
+      "title": "Medication Taken",
+      "description": "Took Morning Lisinopril 10mg on schedule.",
+      "severity": "normal"
+    },
+    {
+      "id": "act-3",
+      "timestamp": "8:15 AM",
+      "type": "checkin",
+      "actor": "Eleanor Vance",
+      "title": "Daily Morning Check-In Completed",
+      "description": "Tapped 'I\\'m Awake & Doing Well!' status button.",
+      "severity": "success"
+    },
+    {
+      "id": "act-4",
+      "timestamp": "8:00 AM",
+      "type": "system",
+      "actor": "CareConnect System",
+      "title": "Scheduled Morning Check-In Window Opened",
+      "description": "Prompt displayed on Senior tablet for daily check-in.",
+      "severity": "info"
+    }
+  ],
+  "escalationRules": {
+    "morningDeadline": "10:00 AM",
+    "maxDelayHours": 2,
+    "sysBpThresholdMax": 140,
+    "sysBpThresholdMin": 90,
+    "diaBpThresholdMax": 90,
+    "diaBpThresholdMin": 60,
+    "bloodSugarThresholdMax": 180,
+    "bloodSugarThresholdMin": 70,
+    "tempThresholdMax": 100.4,
+    "notifySms": true,
+    "notifyCall": true,
+    "notifyEmail": true,
+    "quietHoursEnabled": false
+  },
+  "emergencyContacts": [
+    {
+      "id": "contact-1",
+      "name": "Eleanor Vance",
+      "role": "Senior",
+      "relation": "Mom",
+      "phone": "(206) 555-0149",
+      "badge": "Resident",
+      "primary": false
+    },
+    {
+      "id": "contact-2",
+      "name": "David Vance",
+      "role": "Son & Primary Caregiver",
+      "relation": "Family (5 mins away)",
+      "phone": "(206) 555-0192",
+      "email": "david.vance@example.com",
+      "badge": "Primary Contact",
+      "primary": true
+    },
+    {
+      "id": "contact-3",
+      "name": "Dr. Sarah Smith",
+      "role": "Primary Care Physician",
+      "relation": "Metro Health Cardiology",
+      "phone": "(206) 555-0144",
+      "clinic": "Metro Health Suite 302",
+      "badge": "Doctor",
+      "primary": false
+    },
+    {
+      "id": "contact-4",
+      "name": "Clara Higgins",
+      "role": "Next-Door Neighbor",
+      "relation": "Keyholder & Buddy (Apt 4A)",
+      "phone": "(206) 555-0188",
+      "badge": "Neighbor",
+      "primary": false
+    },
+    {
+      "id": "contact-5",
+      "name": "Emergency Services (911)",
+      "role": "First Responders",
+      "relation": "Local Fire & EMS Station 8",
+      "phone": "911",
+      "badge": "EMS / Dispatch",
+      "primary": false
+    }
+  ]
+}
