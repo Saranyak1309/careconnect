@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CareConnect — Remote Elderly Care & Routine Monitoring</title>
-  
+  <title>CareConnect - Remote Elderly Care & Routine-Monitoring Platform</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -14,1076 +13,1007 @@
         extend: {
           colors: {
             brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0369a1',
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
             },
-            warm: {
-              50: '#fffbf5',
-              100: '#fef3c7',
-              200: '#fde68a',
-              800: '#92400e',
-              900: '#78350f',
-            },
-            caregreen: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
+            elderly: {
+              card: '#ffffff',
+              bg: '#f8fafc',
+              accent: '#0d9488',
+              text: '#0f172a'
             }
           }
         }
       }
     }
   </script>
-
-  <!-- Chart.js CDN -->
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="styles.css">
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="h-full font-size-md bg-slate-50 text-slate-800 antialiased flex flex-col transition-colors duration-200">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-blue-200" data-lang="en">
 
-  <!-- TOP GLOBAL NAVBAR -->
-  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+  <!-- ================= TOP GLOBAL HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       
       <!-- Brand & Tagline -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-          </svg>
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('portal_select')">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-heart-pulse text-2xl"></i>
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">CareConnect</span>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">Hackathon Edition</span>
+          <div class="flex items-center space-x-2">
+            <span class="text-2xl font-black tracking-tight text-slate-900" data-t="app_title">CareConnect</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold uppercase tracking-wider">v2.4 Live</span>
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Remote Elderly Routine & Vital Monitoring</p>
+          <p class="text-xs text-slate-500 hidden sm:block" data-t="app_tagline">Remote Elderly Care & Routine-Monitoring Platform</p>
         </div>
       </div>
 
-      <!-- MAIN ROLE SWITCHER (Senior Mode vs Caregiver Dashboard vs Split View) -->
-      <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-        <button id="nav-btn-senior" onclick="switchView('senior')" class="px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-sm">
-          <span class="text-lg">👵</span>
-          <span>Senior Mode</span>
-        </button>
-        <button id="nav-btn-caregiver" onclick="switchView('caregiver')" class="px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
-          <span class="text-lg">👨‍👩‍👧</span>
-          <span>Caregiver Dashboard</span>
-        </button>
-        <button id="nav-btn-split" onclick="switchView('split')" title="Side-by-side view for demo" class="px-3 py-2 rounded-lg font-bold text-xs sm:text-sm hidden md:flex items-center gap-1.5 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">
-          <span>⚏</span>
-          <span>Split Demo</span>
-        </button>
-      </div>
-
-      <!-- Top Utility Controls (SSE Live Badge, Audio Toggle, Accessibility) -->
-      <div class="flex items-center gap-2 sm:gap-3">
-        <!-- Live SSE indicator -->
-        <div id="live-indicator" class="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span class="hidden sm:inline">Live Sync</span>
+      <!-- Header Controls: Language Switcher + Role Switcher + Live Status -->
+      <div class="flex items-center space-x-3 sm:space-x-4">
+        
+        <!-- Live Backend Sync Indicator -->
+        <div id="sync-indicator" class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span id="sync-text">Live Sync</span>
         </div>
 
-        <!-- Audio Mute/Unmute Toggle -->
-        <button id="audio-toggle-btn" onclick="toggleAudio()" title="Sound Effects Toggle" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors text-sm flex items-center gap-1">
-          <span id="audio-icon">🔊</span>
-        </button>
-
-        <!-- Senior Accessibility Controls (Font Size & High Contrast) -->
-        <div id="senior-a11y-controls" class="flex items-center gap-1 bg-amber-50 dark:bg-slate-800 p-1 rounded-lg border border-amber-200 dark:border-slate-700">
-          <button onclick="changeFontSize('sm')" title="Standard Text" class="px-2 py-1 text-xs font-bold rounded hover:bg-amber-100 dark:hover:bg-slate-700">A</button>
-          <button onclick="changeFontSize('md')" title="Medium Text" class="px-2 py-1 text-sm font-bold rounded bg-amber-200/60 dark:bg-slate-600">A+</button>
-          <button onclick="changeFontSize('lg')" title="Extra Large Text" class="px-2 py-1 text-base font-extrabold rounded hover:bg-amber-100 dark:hover:bg-slate-700">A++</button>
-          <button onclick="toggleHighContrast()" title="High Contrast Mode" class="px-2 py-1 text-xs font-bold rounded bg-amber-100 dark:bg-slate-700 ml-1">🌓</button>
+        <!-- Global Language Switcher -->
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+          <button id="lang-btn-en" onclick="setLanguage('en')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all bg-white text-blue-700 shadow-sm">
+            English
+          </button>
+          <button id="lang-btn-ta" onclick="setLanguage('ta')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all text-slate-600 hover:text-slate-900">
+            தமிழ்
+          </button>
         </div>
 
-        <!-- Caregiver Dark Mode Toggle -->
-        <button id="dark-mode-btn" onclick="toggleDarkMode()" title="Toggle Dark/Light Mode" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
-          <span id="dark-icon">🌙</span>
-        </button>
-      </div>
+        <!-- Role Switcher Toggle (Visible when logged in) -->
+        <div id="role-toggle-container" class="hidden sm:flex items-center bg-blue-50 p-1 rounded-xl border border-blue-200">
+          <button id="toggle-senior-btn" onclick="switchRole('senior')" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center space-x-1.5 transition-all text-blue-900 bg-white shadow-sm">
+            <span>👴</span>
+            <span data-t="senior_portal">Senior Portal</span>
+          </button>
+          <button id="toggle-caregiver-btn" onclick="switchRole('caregiver')" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center space-x-1.5 transition-all text-slate-600 hover:text-blue-900">
+            <span>🩺</span>
+            <span data-t="caregiver_portal">Caregiver</span>
+          </button>
+        </div>
 
+        <!-- Logout / Exit to Portal Selector -->
+        <button id="logout-btn" onclick="logout()" class="hidden px-3 py-1.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm font-semibold transition flex items-center space-x-1.5" title="Exit to Portal Selection">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="hidden md:inline" data-t="logout">Log Out</span>
+        </button>
+
+      </div>
     </div>
   </header>
 
-  <!-- MAIN CONTENT CONTAINER -->
-  <main id="app-container" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-32">
-    
-    <!-- ========================================================================= -->
-    <!-- VIEW 1: SENIOR MODE (Elderly-Friendly, Big Buttons, High Contrast, Voice) -->
-    <!-- ========================================================================= -->
-    <section id="senior-view" class="space-y-6 transition-view">
-      
-      <!-- Senior Greeting & Date Banner -->
-      <div class="senior-card bg-gradient-to-r from-amber-50 via-sky-50 to-emerald-50 dark:from-slate-800 dark:to-slate-850 p-6 sm:p-8 rounded-3xl border-2 border-amber-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-4 text-center md:text-left">
-          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-amber-200 dark:bg-slate-700 flex items-center justify-center text-4xl shadow-md border-2 border-white dark:border-slate-600">
-            👵
-          </div>
-          <div>
-            <h1 class="senior-text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Good Morning, Eleanor!
-            </h1>
-            <p id="senior-date-display" class="text-lg sm:text-xl text-slate-600 dark:text-slate-300 font-medium">
-              Today is Saturday, October 3, 2026 • Seattle, WA (72°F Sunny)
-            </p>
-          </div>
+  <!-- ================= ACTIVE NUDGE BANNER (FOR SENIOR) ================= -->
+  <div id="senior-nudge-banner" class="hidden bg-amber-500 text-slate-950 px-4 py-3 shadow-md border-b-2 border-amber-600">
+    <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center text-amber-700 text-xl font-bold">
+          <i class="fa-solid fa-bell"></i>
         </div>
-
-        <!-- Voice Assistant / Read Aloud Button -->
-        <div class="flex flex-wrap items-center gap-3">
-          <button onclick="speakSeniorSummary()" class="touch-target-senior px-5 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-sky-300 hover:border-sky-500 text-sky-800 dark:text-sky-300 font-bold text-lg shadow-sm flex items-center gap-2 transition-all hover:scale-105 active:scale-95">
-            <span>🗣️</span>
-            <span>Read Screen To Me</span>
-          </button>
+        <div>
+          <h4 class="font-bold text-base md:text-lg" data-t="nudge_received_title">Message from Dr. Priya (Daughter)</h4>
+          <p id="senior-nudge-msg" class="text-sm md:text-base font-medium">"Appa, please drink water and take your afternoon medicines!"</p>
         </div>
       </div>
+      <button onclick="dismissSeniorNudge()" class="bg-white hover:bg-slate-100 text-slate-900 px-4 py-2 rounded-xl font-bold text-sm shadow-sm transition active:scale-95" data-t="nudge_received_btn">
+        I Understand / நன்றி
+      </button>
+    </div>
+  </div>
 
-      <!-- GENTLE REMINDER BANNER (Displayed if status is 🟡 Delayed) -->
-      <div id="senior-delayed-banner" class="hidden senior-card bg-amber-100 dark:bg-amber-950/80 border-4 border-amber-500 p-6 rounded-3xl text-amber-900 dark:text-amber-100 shadow-lg flex items-center gap-4 animate-bounce-subtle">
-        <span class="text-4xl">⚠️</span>
-        <div class="flex-1">
-          <h2 class="text-2xl font-black">Gentle Morning Reminder</h2>
-          <p class="text-lg font-medium">We haven't received today's check-in yet. Please tap the big green button below so David and your family know everything is okay!</p>
+  <!-- ================= ACTIVE EMERGENCY SOS BANNER (STICKY ALERT) ================= -->
+  <div id="global-emergency-banner" class="hidden bg-red-600 text-white px-4 py-3 shadow-lg border-b-4 border-red-800 animate-pulse">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <span class="text-3xl">🚨</span>
+        <div>
+          <h3 class="font-extrabold text-lg md:text-xl tracking-wide uppercase" data-t="status_alert_triggered">🔴 EMERGENCY ALERT TRIGGERED!</h3>
+          <p id="global-emergency-desc" class="text-sm md:text-base text-red-100 font-semibold">Senior Ramanathan pressed the SOS button or routine missed! Emergency responders alerted.</p>
         </div>
       </div>
-
-      <!-- ACTIVE SOS ALERT BANNER (Displayed if status is 🔴 Alert) -->
-      <div id="senior-alert-banner" class="hidden senior-card bg-red-100 dark:bg-red-950/90 border-4 border-red-600 p-6 rounded-3xl text-red-900 dark:text-red-100 shadow-xl flex items-center gap-4">
-        <span class="text-4xl animate-pulse">🚨</span>
-        <div class="flex-1">
-          <h2 class="text-2xl font-black">Emergency Help Alert Active</h2>
-          <p id="senior-alert-text" class="text-lg font-medium">An alert has been dispatched to David Vance and emergency contacts. Assistance is on the way.</p>
-        </div>
-        <button onclick="resolveCurrentAlert('Eleanor (Self-Resolved)')" class="px-5 py-3 rounded-xl bg-white text-red-700 font-black text-lg border-2 border-red-400 hover:bg-red-50">
-          I'm Okay Now (Clear Alert)
+      <div class="flex items-center space-x-2">
+        <a href="tel:108" class="bg-white text-red-700 px-4 py-2 rounded-xl font-black text-sm shadow hover:bg-red-50 flex items-center space-x-1.5">
+          <i class="fa-solid fa-phone-volume"></i>
+          <span>108 Ambulance</span>
+        </a>
+        <button onclick="resolveEmergencyAlert()" class="bg-red-800 hover:bg-red-900 border border-red-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow">
+          Resolve / Stand Down
         </button>
       </div>
+    </div>
+  </div>
 
-      <!-- ======================================== -->
-      <!-- 1. BIG ONE-TAP CHECK-IN HERO COMPONENT   -->
-      <!-- ======================================== -->
-      <div class="senior-card bg-white dark:bg-slate-800 p-6 sm:p-10 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-md text-center relative overflow-hidden">
-        
-        <!-- State A: Pending Check-In -->
-        <div id="checkin-pending-state" class="space-y-6">
-          <div class="max-w-xl mx-auto">
-            <span class="inline-block text-xs sm:text-sm uppercase tracking-wider font-extrabold px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full mb-3">
-              Daily Morning Check-In
-            </span>
-            <h2 class="senior-text-2xl font-black text-slate-900 dark:text-white">
-              Have you woken up &amp; are you feeling well?
-            </h2>
-            <p class="text-lg text-slate-600 dark:text-slate-300 mt-2">
-              Tap the big button below with one touch to notify David &amp; family.
-            </p>
-          </div>
+  <!-- ================= MAIN APP VIEW CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-32">
 
-          <!-- THE PROMINENT ONE-TAP BUTTON -->
-          <div class="py-4">
-            <button id="senior-main-checkin-btn" onclick="performSeniorCheckIn()" class="animate-pulse-green touch-target-senior w-full max-w-xl mx-auto py-8 sm:py-10 px-8 rounded-3xl bg-gradient-to-r from-caregreen-600 to-emerald-500 hover:from-caregreen-700 hover:to-emerald-600 text-white font-black text-2xl sm:text-3xl shadow-xl shadow-caregreen-600/30 flex items-center justify-center gap-4 transition-all hover:scale-102 active:scale-95 border-4 border-emerald-300">
-              <span class="text-4xl sm:text-5xl">🟢</span>
-              <span class="tracking-tight">I'm Awake &amp; Doing Well!</span>
-            </button>
-          </div>
-
-          <!-- Voice Check-In Option (Web Speech API) -->
-          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button onclick="startVoiceRecognition()" class="touch-target-senior px-6 py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-sky-800 dark:text-sky-200 font-extrabold text-lg border-2 border-sky-300 dark:border-sky-500 flex items-center gap-3 transition-transform hover:scale-105">
-              <span class="text-2xl">🎙️</span>
-              <span id="voice-btn-label">Voice Check-In ("Tap &amp; Speak")</span>
-            </button>
-            <span class="text-slate-500 dark:text-slate-400 text-sm">or say "I'm awake and doing well"</span>
-          </div>
+    <!-- VIEW 1: PORTAL SELECTION & DUAL LOGIN SYSTEM -->
+    <section id="view-portal-select" class="space-y-8 max-w-5xl mx-auto py-6">
+      
+      <!-- Welcome Hero -->
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-100 text-blue-800 text-sm font-semibold">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Bilingual Remote Elderly Care System</span>
         </div>
-
-        <!-- State B: Already Checked In Confirmation -->
-        <div id="checkin-done-state" class="hidden space-y-6">
-          <div class="w-20 h-20 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-4xl text-emerald-600 dark:text-emerald-400 border-4 border-emerald-300">
-            ✅
-          </div>
-          <div class="max-w-xl mx-auto">
-            <h2 class="senior-text-2xl font-black text-emerald-800 dark:text-emerald-300">
-              You're Checked In for Today!
-            </h2>
-            <p id="checkin-timestamp-display" class="text-xl font-bold text-slate-800 dark:text-slate-200 mt-2">
-              Checked in today at 8:15 AM
-            </p>
-            <p class="text-base sm:text-lg text-slate-600 dark:text-slate-400 mt-1">
-              David Vance and your care team have been notified that you are up and doing well. ❤️
-            </p>
-          </div>
-
-          <!-- Quick Mood / Update Options -->
-          <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
-            <p class="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">
-              Want to send an optional quick mood note?
-            </p>
-            <div class="flex flex-wrap items-center justify-center gap-3">
-              <button onclick="sendMoodNote('Feeling Energetic & Happy 😊')" class="px-5 py-2.5 rounded-xl bg-amber-50 dark:bg-slate-700 hover:bg-amber-100 border border-amber-300 dark:border-slate-600 font-bold text-base transition-colors">
-                😊 Feeling Great
-              </button>
-              <button onclick="sendMoodNote('Resting Comfortably ☕')" class="px-5 py-2.5 rounded-xl bg-sky-50 dark:bg-slate-700 hover:bg-sky-100 border border-sky-300 dark:border-slate-600 font-bold text-base transition-colors">
-                ☕ Resting Comfortably
-              </button>
-              <button onclick="sendMoodNote('Would Love a Quick Phone Call 📞')" class="px-5 py-2.5 rounded-xl bg-purple-50 dark:bg-slate-700 hover:bg-purple-100 border border-purple-300 dark:border-slate-600 font-bold text-base transition-colors">
-                📞 Request Quick Call
-              </button>
-              <button onclick="reCheckIn()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 border border-slate-300 dark:border-slate-600 font-semibold text-sm transition-colors text-slate-700 dark:text-slate-300">
-                🔄 Re-confirm Check-In
-              </button>
-            </div>
-          </div>
-        </div>
-
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight" data-t="app_tagline">
+          Remote Elderly Care & Routine-Monitoring Platform
+        </h1>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          Empowering elderly seniors with ultra-simple one-tap routines, while giving family caregivers real-time peace of mind.
+        </p>
       </div>
 
-      <!-- VOICE COMMAND CHIPS / LISTENING MODAL INDICATOR -->
-      <div id="voice-listening-card" class="hidden senior-card bg-sky-50 dark:bg-sky-950/70 border-2 border-sky-400 p-6 rounded-3xl shadow-md">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1">
-              <span class="w-1.5 bg-sky-600 dark:bg-sky-400 rounded-full wave-bar-1"></span>
-              <span class="w-1.5 bg-sky-600 dark:bg-sky-400 rounded-full wave-bar-2"></span>
-              <span class="w-1.5 bg-sky-600 dark:bg-sky-400 rounded-full wave-bar-3"></span>
-              <span class="w-1.5 bg-sky-600 dark:bg-sky-400 rounded-full wave-bar-4"></span>
-              <span class="w-1.5 bg-sky-600 dark:bg-sky-400 rounded-full wave-bar-5"></span>
-            </div>
-            <div>
-              <p class="font-extrabold text-lg text-sky-900 dark:text-sky-200" id="voice-status-text">
-                Listening... Speak now or tap a quick phrase:
-              </p>
-              <p id="voice-transcript-text" class="text-sm font-medium text-sky-700 dark:text-sky-300 italic">
-                Try saying: "I'm doing well" or "Took my morning medicine"
-              </p>
-            </div>
+      <!-- Dual Login Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+
+        <!-- CARD A: SENIOR LOGIN -->
+        <div class="bg-white rounded-3xl p-8 shadow-xl border-4 border-emerald-400 hover:border-emerald-500 transition-all flex flex-col justify-between relative overflow-hidden group">
+          <div class="absolute top-0 right-0 bg-emerald-500 text-white font-extrabold text-xs px-4 py-1.5 rounded-bl-2xl uppercase tracking-wider">
+            High Contrast &bull; Large Touch
           </div>
-          <button onclick="stopVoiceRecognition()" class="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 text-sky-800 dark:text-sky-200 font-bold border border-sky-300 text-sm">
-            Done / Close
-          </button>
-        </div>
-        <!-- Quick Voice Simulation Chips -->
-        <div class="mt-4 flex flex-wrap gap-2">
-          <span class="text-xs font-bold text-sky-800 dark:text-sky-300 self-center">Demo Quick Commands:</span>
-          <button onclick="simulateVoiceCommand('I am awake and doing well!')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-sky-100 text-sky-900 dark:text-sky-200 text-sm font-semibold border border-sky-200">
-            "I'm awake and doing well"
-          </button>
-          <button onclick="simulateVoiceCommand('Took morning blood pressure medication')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-sky-100 text-sky-900 dark:text-sky-200 text-sm font-semibold border border-sky-200">
-            "Took morning BP medicine"
-          </button>
-          <button onclick="simulateVoiceCommand('Log vitals 120 over 80 and 98.6 temperature')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-sky-100 text-sky-900 dark:text-sky-200 text-sm font-semibold border border-sky-200">
-            "Log vitals 120 over 80"
-          </button>
-          <button onclick="simulateVoiceCommand('Help me emergency')" class="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900 text-red-900 dark:text-red-200 text-sm font-bold border border-red-300">
-            "Help me emergency"
-          </button>
-        </div>
-      </div>
-
-      <!-- ======================================== -->
-      <!-- 2. TODAY'S CHECKLIST (MEDS, VITALS, APT) -->
-      <!-- ======================================== -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- A. Medication Reminders (Simple vertical cards with large "Mark as Taken" button) -->
-        <div class="lg:col-span-2 space-y-4">
-          <div class="flex items-center justify-between">
-            <h2 class="senior-text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <span>💊</span>
-              <span>Today's Medications</span>
-            </h2>
-            <span id="meds-count-badge" class="text-sm font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">
-              1 of 4 Taken
-            </span>
-          </div>
-
-          <!-- Dynamic Medication Cards Container -->
-          <div id="senior-medications-list" class="space-y-4">
-            <!-- Rendered dynamically by app.js -->
-          </div>
-        </div>
-
-        <!-- B. Doctor Appointment Card -->
-        <div class="space-y-4">
-          <h2 class="senior-text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <span>🩺</span>
-            <span>Doctor Appointment</span>
-          </h2>
-
-          <div id="senior-appointment-card" class="senior-card bg-white dark:bg-slate-800 p-6 rounded-3xl border-2 border-indigo-200 dark:border-indigo-900 shadow-sm space-y-4">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="text-xs font-extrabold uppercase px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
-                  Scheduled Today
-                </span>
-                <h3 class="text-xl font-black text-slate-900 dark:text-white mt-2">
-                  Dr. Sarah Smith, M.D.
-                </h3>
-                <p class="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                  Cardiology &amp; General Geriatrics
-                </p>
-              </div>
-              <span class="text-3xl">🏥</span>
-            </div>
-
-            <div class="bg-indigo-50/70 dark:bg-slate-700/50 p-4 rounded-2xl space-y-2 border border-indigo-100 dark:border-slate-600">
-              <div class="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-200">
-                <span class="text-xl">⏰</span>
-                <span>Time: 4:00 PM Today</span>
-              </div>
-              <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <span>📍</span>
-                <span>Metro Health Center, Suite 302</span>
-              </div>
-              <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <span>🚗</span>
-                <span class="font-semibold text-emerald-700 dark:text-emerald-400">Son David picking up at 3:15 PM</span>
-              </div>
-            </div>
-
-            <p class="text-xs text-slate-500 dark:text-slate-400 italic">
-              "Bring past week blood pressure &amp; blood sugar logs for review."
-            </p>
-
-            <div class="grid grid-cols-2 gap-2 pt-2">
-              <button onclick="simulateCall('Dr. Sarah Smith', '(206) 555-0144', 'Metro Health Cardiology')" class="touch-target-senior py-2.5 px-3 rounded-xl bg-white dark:bg-slate-700 border-2 border-indigo-300 hover:border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm">
-                <span>📞</span> Call Clinic
-              </button>
-              <button onclick="simulateCall('David Vance (Son)', '(206) 555-0192', 'Primary Caregiver & Driver')" class="touch-target-senior py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm">
-                <span>🚗</span> Call Driver
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ======================================== -->
-      <!-- 3. QUICK HEALTH VITALS ENTRY FORM        -->
-      <!-- ======================================== -->
-      <div class="senior-card bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-md space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
           <div>
-            <h2 class="senior-text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <span>❤️</span>
-              <span>Quick Health Vitals Entry</span>
-            </h2>
-            <p class="text-base text-slate-600 dark:text-slate-400 font-medium">
-              Record your morning health checks. Shared instantly with Dr. Smith &amp; David.
+            <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl mb-6 group-hover:scale-105 transition-transform">
+              👴
+            </div>
+            <h2 class="text-3xl font-black text-slate-900 mb-2" data-t="senior_login_title">Senior Portal Login</h2>
+            <p class="text-slate-600 text-base mb-6 font-medium" data-t="senior_login_desc">
+              Oversized buttons, easy PIN or Mobile login for seniors.
             </p>
+
+            <form onsubmit="handleSeniorLogin(event)" class="space-y-5">
+              <div>
+                <label class="block text-base font-bold text-slate-800 mb-1" data-t="mobile_number">Mobile Number</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 text-lg">
+                    <i class="fa-solid fa-phone"></i>
+                  </div>
+                  <input type="tel" id="senior-mobile-input" value="98401 23456" class="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 text-lg font-bold text-slate-900" placeholder="e.g. 98401 23456" required>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-base font-bold text-slate-800 mb-1" data-t="pin_label">4-Digit Secret PIN</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 text-lg">
+                    <i class="fa-solid fa-key"></i>
+                  </div>
+                  <input type="password" id="senior-pin-input" value="1234" maxlength="4" class="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 text-xl font-bold tracking-widest text-slate-900" placeholder="••••" required>
+                </div>
+              </div>
+
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center space-x-3">
+                <i class="fa-solid fa-person-cane text-2xl"></i>
+                <span data-t="login_senior_btn">Open Senior Portal</span>
+              </button>
+            </form>
           </div>
-          <div id="vitals-last-logged-badge" class="self-start sm:self-auto text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
-            Last logged today at 8:28 AM
+
+          <!-- Quick One-Click Demo Senior Login -->
+          <div class="pt-6 mt-6 border-t border-slate-100 text-center">
+            <button type="button" onclick="quickDemoLogin('senior')" class="text-sm font-extrabold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2.5 rounded-xl border border-emerald-300 w-full transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span data-t="quick_demo_senior">One-Click Senior Login (Thiru. Ramanathan)</span>
+            </button>
           </div>
         </div>
 
-        <form id="senior-vitals-form" onsubmit="handleSeniorVitalsSubmit(event)" class="space-y-6">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            <!-- Blood Pressure Card -->
-            <div class="bg-rose-50/60 dark:bg-slate-750 p-4 rounded-2xl border-2 border-rose-200 dark:border-slate-600 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-black text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
-                  <span>🩸</span> Blood Pressure
-                </span>
-                <span class="text-xs font-bold px-2 py-0.5 rounded bg-rose-200 text-rose-900 dark:bg-rose-900/60 dark:text-rose-200">mmHg</span>
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Systolic (Top)</label>
-                  <input type="number" id="vital-bp-sys" value="122" min="70" max="220" required class="w-full text-2xl font-black text-center p-2 rounded-xl border-2 border-rose-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Diastolic (Bot)</label>
-                  <input type="number" id="vital-bp-dia" value="78" min="40" max="140" required class="w-full text-2xl font-black text-center p-2 rounded-xl border-2 border-rose-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500">
-                </div>
-              </div>
-              <div class="flex items-center justify-between text-xs text-rose-700 dark:text-rose-300 font-semibold">
-                <span>Normal Target:</span>
-                <span class="font-bold">&lt; 130 / 85 mmHg</span>
-              </div>
+        <!-- CARD B: CAREGIVER LOGIN -->
+        <div class="bg-white rounded-3xl p-8 shadow-xl border-4 border-blue-400 hover:border-blue-500 transition-all flex flex-col justify-between relative overflow-hidden group">
+          <div class="absolute top-0 right-0 bg-blue-600 text-white font-extrabold text-xs px-4 py-1.5 rounded-bl-2xl uppercase tracking-wider">
+            Family & Medical Center
+          </div>
+          <div>
+            <div class="w-16 h-16 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-3xl mb-6 group-hover:scale-105 transition-transform">
+              🩺
             </div>
+            <h2 class="text-3xl font-black text-slate-900 mb-2" data-t="caregiver_login_title">Caregiver & Family Login</h2>
+            <p class="text-slate-600 text-base mb-6 font-medium" data-t="caregiver_login_desc">
+              Monitor routines, vitals trends, medication alerts & live sync.
+            </p>
 
-            <!-- Temperature Card -->
-            <div class="bg-amber-50/60 dark:bg-slate-750 p-4 rounded-2xl border-2 border-amber-200 dark:border-slate-600 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                  <span>🌡️</span> Body Temp
-                </span>
-                <span class="text-xs font-bold px-2 py-0.5 rounded bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">°F</span>
-              </div>
+            <form onsubmit="handleCaregiverLogin(event)" class="space-y-5">
               <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Reading</label>
-                <div class="flex items-center gap-2">
-                  <button type="button" onclick="adjustInput('vital-temp', -0.2)" class="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 border border-amber-300 font-bold text-lg text-amber-900 dark:text-amber-200 hover:bg-amber-100">-</button>
-                  <input type="number" step="0.1" id="vital-temp" value="98.4" min="95.0" max="106.0" required class="w-full text-2xl font-black text-center p-2 rounded-xl border-2 border-amber-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
-                  <button type="button" onclick="adjustInput('vital-temp', 0.2)" class="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 border border-amber-300 font-bold text-lg text-amber-900 dark:text-amber-200 hover:bg-amber-100">+</button>
+                <label class="block text-base font-bold text-slate-800 mb-1" data-t="email_label">Caregiver Email</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 text-lg">
+                    <i class="fa-solid fa-envelope"></i>
+                  </div>
+                  <input type="email" id="caregiver-email-input" value="priya.care@gmail.com" class="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-base font-bold text-slate-900" placeholder="priya.care@gmail.com" required>
                 </div>
               </div>
-              <div class="flex items-center justify-between text-xs text-amber-700 dark:text-amber-300 font-semibold">
-                <span>Normal Target:</span>
-                <span class="font-bold">97.8 - 99.0 °F</span>
-              </div>
-            </div>
 
-            <!-- Blood Sugar Card -->
-            <div class="bg-emerald-50/60 dark:bg-slate-750 p-4 rounded-2xl border-2 border-emerald-200 dark:border-slate-600 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                  <span>🩸</span> Blood Sugar
-                </span>
-                <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">mg/dL</span>
-              </div>
               <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Glucose Level</label>
-                <input type="number" id="vital-sugar" value="106" min="40" max="400" required class="w-full text-2xl font-black text-center p-2 rounded-xl border-2 border-emerald-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label class="block text-base font-bold text-slate-800 mb-1" data-t="password_label">Password</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 text-lg">
+                    <i class="fa-solid fa-lock"></i>
+                  </div>
+                  <input type="password" id="caregiver-pass-input" value="password123" class="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-lg font-bold text-slate-900" placeholder="••••••••" required>
+                </div>
               </div>
-              <div class="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
-                <span>Fasting Target:</span>
-                <span class="font-bold">70 - 120 mg/dL</span>
-              </div>
-            </div>
 
-            <!-- Heart Rate Card -->
-            <div class="bg-sky-50/60 dark:bg-slate-750 p-4 rounded-2xl border-2 border-sky-200 dark:border-slate-600 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-black text-sky-800 dark:text-sky-300 flex items-center gap-1.5">
-                  <span>💓</span> Pulse / Heart Rate
-                </span>
-                <span class="text-xs font-bold px-2 py-0.5 rounded bg-sky-200 text-sky-900 dark:bg-sky-900/60 dark:text-sky-200">bpm</span>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Beats Per Min</label>
-                <input type="number" id="vital-hr" value="72" min="40" max="180" required class="w-full text-2xl font-black text-center p-2 rounded-xl border-2 border-sky-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-              </div>
-              <div class="flex items-center justify-between text-xs text-sky-700 dark:text-sky-300 font-semibold">
-                <span>Normal Resting:</span>
-                <span class="font-bold">60 - 90 bpm</span>
-              </div>
-            </div>
-
+              <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center space-x-3">
+                <i class="fa-solid fa-chart-line text-2xl"></i>
+                <span data-t="login_caregiver_btn">Access Caregiver Dashboard</span>
+              </button>
+            </form>
           </div>
 
-          <div id="senior-vitals-toast" class="hidden p-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 border-2 border-emerald-400 text-emerald-900 dark:text-emerald-200 font-bold text-center flex items-center justify-center gap-2">
-            <span>✅</span>
-            <span id="senior-vitals-toast-msg">Vitals successfully recorded and shared with Dr. Smith &amp; David!</span>
-          </div>
-
-          <div class="flex items-center justify-end gap-3 pt-2">
-            <button type="submit" class="touch-target-senior w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 text-white font-black text-xl shadow-lg shadow-sky-600/20 flex items-center justify-center gap-2 transition-transform hover:scale-102 active:scale-95">
-              <span>💾</span>
-              <span>Save &amp; Share Today's Vitals</span>
+          <!-- Quick One-Click Demo Caregiver Login -->
+          <div class="pt-6 mt-6 border-t border-slate-100 text-center">
+            <button type="button" onclick="quickDemoLogin('caregiver')" class="text-sm font-extrabold text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2.5 rounded-xl border border-blue-300 w-full transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-user-doctor"></i>
+              <span data-t="quick_demo_caregiver">One-Click Caregiver Login (Dr. Priya)</span>
             </button>
           </div>
-        </form>
+        </div>
+
       </div>
 
-      <!-- ======================================== -->
-      <!-- 4. PANIC / HELP BUTTON (EMERGENCY SOS)   -->
-      <!-- ======================================== -->
-      <div class="senior-card bg-red-50 dark:bg-red-950/40 p-6 sm:p-8 rounded-3xl border-4 border-red-300 dark:border-red-900 shadow-md">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div class="space-y-2 text-center md:text-left">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-200 dark:bg-red-900 text-red-900 dark:text-red-100 font-black text-sm">
-              <span>🚨</span> 24/7 Priority Emergency Alert
-            </div>
-            <h2 class="senior-text-2xl font-black text-red-900 dark:text-red-200">
-              Need Urgent Help or Medical Attention?
-            </h2>
-            <p class="text-base sm:text-lg text-red-800 dark:text-red-300">
-              Tapping the SOS button will immediately notify David, neighbor Clara, and prepare emergency services.
-            </p>
-          </div>
-
-          <!-- THE RED PANIC BUTTON -->
-          <button onclick="triggerEmergencySOS()" class="animate-pulse-sos touch-target-senior w-full md:w-auto px-10 py-6 sm:py-7 rounded-3xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-black text-2xl sm:text-3xl shadow-xl shadow-red-600/40 border-4 border-red-400 flex items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
-            <span class="text-4xl">🚨</span>
-            <span>SOS / EMERGENCY HELP</span>
-          </button>
+      <!-- Feature highlights strip -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 text-center">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-2xl mb-1">👆</div>
+          <h4 class="font-bold text-slate-800 text-sm">One-Tap Check-In</h4>
+          <p class="text-xs text-slate-500">Zero tech complexity</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-2xl mb-1">💊</div>
+          <h4 class="font-bold text-slate-800 text-sm">Medication Checklist</h4>
+          <p class="text-xs text-slate-500">Clear daily schedule</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-2xl mb-1">📈</div>
+          <h4 class="font-bold text-slate-800 text-sm">7-Day Vitals Trend</h4>
+          <p class="text-xs text-slate-500">Chart.js visual curves</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+          <div class="text-2xl mb-1">🌐</div>
+          <h4 class="font-bold text-slate-800 text-sm">100% Tamil & English</h4>
+          <p class="text-xs text-slate-500">முழு இருமொழி ஆதரவு</p>
         </div>
       </div>
 
     </section>
 
-    <!-- ========================================================================= -->
-    <!-- VIEW 2: CAREGIVER / FAMILY DASHBOARD (Data-Rich, Real-Time Monitoring)   -->
-    <!-- ========================================================================= -->
-    <section id="caregiver-view" class="hidden space-y-6 transition-view">
+    <!-- ================= VIEW 2: SENIOR MODE VIEW (ELDERLY PORTAL) ================= -->
+    <section id="view-senior" class="hidden senior-mode space-y-8 max-w-4xl mx-auto">
       
-      <!-- Top Overview Banner: Senior Status, Live Badge & Actions -->
-      <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        
-        <div class="flex items-center gap-4">
-          <div class="relative">
-            <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-4xl shadow-inner">
-              👵
+      <!-- Senior Greeting & Live Status Header Card -->
+      <div class="bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center space-x-2 bg-white/20 backdrop-blur px-3.5 py-1 rounded-full text-sm font-bold mb-2">
+              <span id="senior-greeting-time">காலை வணக்கம்</span>
+              <span>&bull;</span>
+              <span id="senior-date-display">Today, Oct 3</span>
             </div>
-            <!-- Live status dot -->
-            <span id="cg-status-dot" class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] text-white font-bold">✓</span>
+            <h1 id="senior-greeting-title" class="font-black tracking-tight" data-t="senior_greeting_morning">
+              Good Morning, Thiru. Ramanathan!
+            </h1>
+            <p class="text-emerald-100 font-medium text-lg mt-1" data-t="senior_subtitle">
+              Tap below to let your daughter Dr. Priya know you are doing well.
+            </p>
+          </div>
+
+          <!-- Quick Senior Profile Pill -->
+          <div class="bg-black/20 backdrop-blur rounded-2xl p-4 border border-white/20 flex items-center space-x-3 min-w-[200px]">
+            <div class="w-12 h-12 rounded-xl bg-white text-emerald-800 flex items-center justify-center text-2xl font-bold">
+              👴
+            </div>
+            <div>
+              <h4 id="senior-badge-name" class="font-black text-base leading-tight">Thiru. Ramanathan</h4>
+              <p class="text-xs text-emerald-200 font-semibold">74 yrs &bull; Anna Nagar, Chennai</p>
+              <div class="flex items-center space-x-1.5 mt-1 text-xs text-emerald-300 font-bold">
+                <i class="fa-solid fa-battery-three-quarters text-emerald-300"></i>
+                <span id="senior-battery-val">88% Battery</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. BIG ONE-TAP CHECK-IN BUTTON (CORE REQUIREMENT) -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-4 border-emerald-500 text-center relative overflow-hidden">
+        <div class="max-w-2xl mx-auto space-y-4">
+          
+          <!-- Outer Pulsing Ring & Huge Button -->
+          <div class="relative inline-block my-2">
+            <div id="checkin-pulse-ring" class="absolute -inset-4 bg-emerald-400/30 rounded-full animate-pulse-ring pointer-events-none"></div>
+            
+            <button id="senior-checkin-btn" onclick="triggerSeniorCheckin('One-Tap Button')" class="relative w-72 h-72 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-2xl shadow-emerald-600/50 hover:shadow-emerald-600/70 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center p-6 border-8 border-white group">
+              
+              <!-- Icon that morphs from sun to checkmark -->
+              <div id="checkin-icon-container" class="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mb-3 group-hover:rotate-12 transition-transform">
+                <i id="checkin-btn-icon" class="fa-solid fa-sun text-5xl text-amber-300"></i>
+              </div>
+
+              <!-- Button Label (Min 20px, high contrast) -->
+              <span id="checkin-btn-label" class="text-2xl sm:text-3xl font-black leading-snug tracking-tight px-2" data-t="checkin_btn_text">
+                I'm Awake & Doing Well!
+              </span>
+
+              <!-- Touch hint -->
+              <span id="checkin-btn-sub" class="text-sm font-bold text-emerald-100 mt-2 bg-emerald-800/40 px-3 py-1 rounded-full">
+                👆 தொடுக / Tap Once
+              </span>
+
+            </button>
+          </div>
+
+          <!-- Check-in Status Banner -->
+          <div id="checkin-status-box" class="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-900 max-w-lg mx-auto">
+            <div class="flex items-center justify-center space-x-2 text-lg font-bold">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-xl"></i>
+              <span id="checkin-status-text">Checked in today at 07:45 AM</span>
+            </div>
+            <p class="text-sm text-emerald-700 font-semibold mt-1" data-t="checkin_success_desc">
+              Dr. Priya and family have been notified in real time.
+            </p>
+          </div>
+
+          <!-- Voice Check-in Alternative (Mic Button) -->
+          <div class="pt-2 flex items-center justify-center">
+            <button onclick="openVoiceCheckinModal()" class="bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-800 px-6 py-3.5 rounded-2xl font-black text-lg flex items-center space-x-3 shadow-sm transition active:scale-95">
+              <i class="fa-solid fa-microphone text-xl text-blue-600"></i>
+              <span data-t="voice_btn_text">Voice Check-In (Mic)</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 2. MEDICATION CHECKLIST (VERTICAL CARDS, OVERSIZED TARGETS) -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-2">
+          <div>
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl">
+                💊
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-black text-slate-900" data-t="meds_title">
+                Today's Medication Checklist
+              </h2>
+            </div>
+            <p class="text-base text-slate-600 font-semibold mt-1" data-t="meds_subtitle">
+              Single-tap to mark each medicine as taken
+            </p>
+          </div>
+          <!-- Progress pill -->
+          <div id="senior-meds-counter" class="bg-blue-50 text-blue-900 border border-blue-200 px-4 py-2 rounded-2xl font-black text-lg text-center">
+            2 / 4 Taken
+          </div>
+        </div>
+
+        <!-- Medicine List Container (Dynamic) -->
+        <div id="senior-meds-list" class="space-y-4">
+          <!-- Populated dynamically via renderSeniorMedications() -->
+        </div>
+      </div>
+
+      <!-- 3. BASIC HEALTH READINGS ENTRY (OVERSIZED BUTTONS & NUMPAD) -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-6">
+        <div class="flex items-center space-x-3 pb-4 border-b border-slate-200">
+          <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-2xl">
+            💓
           </div>
           <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-2xl font-black text-slate-900 dark:text-white">Eleanor Vance</h1>
-              <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">Age 78</span>
-              <!-- LIVE STATUS BADGE -->
-              <span id="cg-live-status-badge" class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
-                🟢 Everything OK
-              </span>
-            </div>
-            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Pinecrest Senior Living, Apt 4B, Seattle, WA • Last Active: <span id="cg-last-active" class="font-bold text-slate-700 dark:text-slate-200">8:28 AM Today</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900" data-t="vitals_title">
+              Quick Health Readings Entry
+            </h2>
+            <p class="text-base text-slate-600 font-semibold" data-t="vitals_subtitle">
+              Log your daily measurements easily
             </p>
           </div>
         </div>
 
-        <!-- Quick Caregiver Actions -->
-        <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-          <button onclick="simulateCall('Eleanor Vance (Mom)', '(206) 555-0149', 'Senior Resident')" class="px-4 py-2 rounded-xl bg-sky-50 dark:bg-slate-700 hover:bg-sky-100 text-sky-700 dark:text-sky-300 font-bold text-sm border border-sky-200 dark:border-slate-600 flex items-center gap-1.5 transition-colors">
-            <span>📞</span> Call Eleanor
-          </button>
-          <button onclick="openSmsModal('Eleanor Vance (Mom)', '(206) 555-0149')" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 transition-colors">
-            <span>💬</span> Send SMS
-          </button>
-          <button onclick="openAddNoteModal()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm flex items-center gap-1.5 transition-colors">
-            <span>➕</span> Add Caregiver Note
-          </button>
-        </div>
+        <!-- 3-Column Vitals Inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-      </div>
-
-      <!-- CRITICAL / WARNING ALERT BANNER (Shows in Caregiver Dashboard if delayed or SOS) -->
-      <div id="cg-alert-banner" class="hidden p-5 rounded-2xl border-2 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div class="flex items-start sm:items-center gap-3">
-          <span id="cg-alert-icon" class="text-3xl">⚠️</span>
-          <div>
-            <h3 id="cg-alert-title" class="font-black text-lg">Alert Notification</h3>
-            <p id="cg-alert-msg" class="text-sm font-medium">Issue description will appear here.</p>
-            <p id="cg-alert-sub" class="text-xs mt-1 opacity-80"></p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="resolveCurrentAlert('David Vance (Son & Caregiver)')" class="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 font-black text-sm shadow-sm border hover:bg-slate-50 transition-colors">
-            Acknowledge &amp; Clear Alert
-          </button>
-        </div>
-      </div>
-
-      <!-- KEY METRICS ROW (4 Cards) -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <!-- Metric 1: Check-In Status -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Morning Check-In</span>
-            <span id="cg-metric-checkin-icon" class="text-xl">🟢</span>
-          </div>
-          <p id="cg-metric-checkin-time" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            8:15 AM
-          </p>
-          <p id="cg-metric-checkin-status" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            ✓ Confirmed on time
-          </p>
-        </div>
-
-        <!-- Metric 2: Medication Progress -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Medications</span>
-            <span class="text-xl">💊</span>
-          </div>
-          <p id="cg-metric-meds-progress" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            1 of 4 Taken
-          </p>
-          <p id="cg-metric-meds-next" class="text-xs font-semibold text-sky-600 dark:text-sky-400">
-            Next: Vitamin D3 @ 1:00 PM
-          </p>
-        </div>
-
-        <!-- Metric 3: Latest Blood Pressure -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Blood Pressure</span>
-            <span class="text-xl">🩸</span>
-          </div>
-          <p id="cg-metric-bp-val" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            122 / 78
-          </p>
-          <p id="cg-metric-bp-label" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            Optimal Range (8:28 AM)
-          </p>
-        </div>
-
-        <!-- Metric 4: Latest Blood Sugar -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Blood Sugar</span>
-            <span class="text-xl">📊</span>
-          </div>
-          <p id="cg-metric-sugar-val" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            106 mg/dL
-          </p>
-          <p id="cg-metric-sugar-label" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            Normal Fasting (8:28 AM)
-          </p>
-        </div>
-
-      </div>
-
-      <!-- MAIN 2-COLUMN DASHBOARD LAYOUT -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- LEFT 7 COLS: CHARTS & ESCALATION RULES -->
-        <div class="lg:col-span-7 space-y-6">
-          
-          <!-- VITALS TRACKER CHARTS CARD -->
-          <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>📈</span> Vitals Tracker (Past 7 Days)
-                </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
-                  Continuous routine tracking with normal clinical thresholds
-                </p>
-              </div>
-
-              <!-- Chart Metric Tabs -->
-              <div class="flex items-center bg-slate-100 dark:bg-slate-700 p-1 rounded-xl text-xs font-bold">
-                <button id="tab-chart-bp" onclick="switchChartTab('bp')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-600 text-sky-700 dark:text-sky-300 shadow-xs">
-                  Blood Pressure
-                </button>
-                <button id="tab-chart-sugar" onclick="switchChartTab('sugar')" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900">
-                  Blood Sugar
-                </button>
-                <button id="tab-chart-hr" onclick="switchChartTab('hr')" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900">
-                  Heart Rate
-                </button>
-              </div>
-            </div>
-
-            <!-- Chart Canvas -->
-            <div class="h-64 sm:h-72 w-full relative">
-              <canvas id="vitalsChart"></canvas>
-            </div>
-
-            <!-- Chart Stats Footer -->
-            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-center">
-              <div class="p-2 bg-slate-50 dark:bg-slate-750 rounded-xl">
-                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">7-Day Mean BP</span>
-                <p id="stat-mean-bp" class="text-sm font-black text-slate-800 dark:text-slate-200">124 / 80 mmHg</p>
-              </div>
-              <div class="p-2 bg-slate-50 dark:bg-slate-750 rounded-xl">
-                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Mean Glucose</span>
-                <p id="stat-mean-sugar" class="text-sm font-black text-slate-800 dark:text-slate-200">110 mg/dL</p>
-              </div>
-              <div class="p-2 bg-slate-50 dark:bg-slate-750 rounded-xl">
-                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Threshold Compliance</span>
-                <p class="text-sm font-black text-emerald-600 dark:text-emerald-400">100% In Bounds</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- ESCALATION & ANOMALY RULE SETTINGS PANEL -->
-          <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
-              <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>⚙️</span> Escalation &amp; Anomaly Rules
-                </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
-                  Configure automated alert triggers, thresholds, and caregiver notification channels
-                </p>
-              </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">Active</span>
-            </div>
-
-            <form id="cg-rules-form" onsubmit="saveEscalationRules(event)" class="space-y-4 text-sm">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                <!-- Morning Check-In Deadline -->
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Morning Check-In Cutoff</label>
-                  <input type="text" id="rule-deadline" value="10:00 AM" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white font-medium">
-                  <span class="text-[11px] text-slate-500">Scheduled wake time is 8:00 AM</span>
-                </div>
-
-                <!-- Max Delay Tolerance -->
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Escalate if Late By</label>
-                  <select id="rule-max-delay" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white font-medium">
-                    <option value="1">1 Hour Late (Gentle Reminder)</option>
-                    <option value="2" selected>2 Hours Late (Caregiver Alert)</option>
-                    <option value="3">3 Hours Late (Full Escalation)</option>
-                  </select>
-                </div>
-
-                <!-- Systolic BP Alert Threshold -->
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Max Systolic BP Alert (&gt; mmHg)</label>
-                  <input type="number" id="rule-sys-max" value="140" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white font-medium">
-                </div>
-
-                <!-- Diastolic BP Alert Threshold -->
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Max Diastolic BP Alert (&gt; mmHg)</label>
-                  <input type="number" id="rule-dia-max" value="90" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white font-medium">
-                </div>
-
-                <!-- Blood Sugar Alert Threshold -->
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Max Blood Sugar Alert (&gt; mg/dL)</label>
-                  <input type="number" id="rule-sugar-max" value="180" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white font-medium">
-                </div>
-
-                <!-- Temperature Fever Alert Threshold -->
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Fever Alert (&gt; °F)</label>
-                  <input type="number" step="0.1" id="rule-temp-max" value="100.4" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white font-medium">
-                </div>
-
-              </div>
-
-              <!-- Notification Channels -->
-              <div class="pt-2 border-t border-slate-100 dark:border-slate-700">
-                <span class="block font-bold text-slate-700 dark:text-slate-300 mb-2">Escalation Notification Channels:</span>
-                <div class="flex flex-wrap gap-4 text-xs font-semibold">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="rule-sms" checked class="rounded text-sky-600 focus:ring-sky-500">
-                    <span>SMS to David (+1-206-555-0192)</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="rule-call" checked class="rounded text-sky-600 focus:ring-sky-500">
-                    <span>Automated Voice Phone Backup</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="rule-email" checked class="rounded text-sky-600 focus:ring-sky-500">
-                    <span>Email Digest to Family</span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between pt-2">
-                <span id="rules-save-indicator" class="text-xs font-bold text-emerald-600 hidden">✓ Rules saved to server</span>
-                <button type="submit" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-700 text-white font-bold text-sm shadow-sm transition-colors ml-auto">
-                  Save Escalation Rules
-                </button>
-              </div>
-            </form>
-          </div>
-
-        </div>
-
-        <!-- RIGHT 5 COLS: ACTIVITY TIMELINE & EMERGENCY CONTACTS -->
-        <div class="lg:col-span-5 space-y-6">
-          
-          <!-- ACTIVITY & ROUTINE TIMELINE -->
-          <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+          <!-- Blood Pressure Card -->
+          <div class="bg-slate-50 rounded-2xl p-5 border-2 border-slate-200 space-y-3">
             <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>⏱️</span> Activity &amp; Routine Timeline
-                </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Live feed of all check-ins, vitals &amp; logs</p>
+              <span class="font-extrabold text-lg text-slate-900" data-t="bp_label">Blood Pressure</span>
+              <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">mmHg</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <div class="flex-1">
+                <span class="text-xs font-bold text-slate-500 block mb-1" data-t="bp_sys">Systolic</span>
+                <input type="number" id="vital-sys-input" value="122" min="80" max="220" class="w-full text-center text-2xl font-black p-3 bg-white border-2 border-slate-300 rounded-xl focus:border-purple-600">
               </div>
-              <button onclick="openAddNoteModal()" class="text-xs font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400">
-                + Note
+              <span class="text-2xl font-black text-slate-400 pt-5">/</span>
+              <div class="flex-1">
+                <span class="text-xs font-bold text-slate-500 block mb-1" data-t="bp_dia">Diastolic</span>
+                <input type="number" id="vital-dia-input" value="82" min="40" max="140" class="w-full text-center text-2xl font-black p-3 bg-white border-2 border-slate-300 rounded-xl focus:border-purple-600">
+              </div>
+            </div>
+            <p class="text-xs font-semibold text-slate-500 text-center" data-t="optimal_bp_hint">Healthy target: 120 / 80 mmHg</p>
+          </div>
+
+          <!-- Blood Sugar Card -->
+          <div class="bg-slate-50 rounded-2xl p-5 border-2 border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-lg text-slate-900" data-t="sugar_label">Blood Sugar</span>
+              <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded" data-t="sugar_unit">mg/dL</span>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-500 block mb-1">Fasting / After Food</span>
+              <input type="number" id="vital-sugar-input" value="114" min="50" max="400" class="w-full text-center text-2xl font-black p-3 bg-white border-2 border-slate-300 rounded-xl focus:border-amber-600">
+            </div>
+            <p class="text-xs font-semibold text-slate-500 text-center" data-t="fasting_sugar_hint">Target fasting: 80 - 125 mg/dL</p>
+          </div>
+
+          <!-- Body Temperature Card -->
+          <div class="bg-slate-50 rounded-2xl p-5 border-2 border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-lg text-slate-900" data-t="temp_label">Body Temperature</span>
+              <span class="text-xs bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded" data-t="temp_unit">°F</span>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-500 block mb-1">Standard Oral</span>
+              <input type="number" id="vital-temp-input" value="98.4" step="0.1" min="95.0" max="106.0" class="w-full text-center text-2xl font-black p-3 bg-white border-2 border-slate-300 rounded-xl focus:border-rose-600">
+            </div>
+            <p class="text-xs font-semibold text-slate-500 text-center" data-t="temp_hint">Normal range: 97.8 - 99.0 °F</p>
+          </div>
+
+        </div>
+
+        <button onclick="submitSeniorVitals()" class="w-full bg-purple-700 hover:bg-purple-800 active:scale-98 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-purple-700/30 transition-all flex items-center justify-center space-x-3">
+          <i class="fa-solid fa-floppy-disk text-2xl"></i>
+          <span data-t="save_readings_btn">Save Health Readings</span>
+        </button>
+      </div>
+
+      <!-- 4. DOCTOR APPOINTMENT CARD -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-2xl">
+              🩺
+            </div>
+            <div>
+              <h2 class="text-2xl sm:text-3xl font-black text-slate-900" data-t="appointment_title">
+                Upcoming Doctor Appointment
+              </h2>
+              <span class="text-xs bg-teal-100 text-teal-800 font-bold px-2.5 py-0.5 rounded-full uppercase" data-t="reminder_active">
+                Active Alarm Set for Appointment
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div class="p-4 rounded-2xl bg-teal-50 border border-teal-200 space-y-2">
+            <div class="text-sm font-bold text-teal-900 flex items-center space-x-2">
+              <i class="fa-solid fa-user-doctor text-teal-600"></i>
+              <span data-t="doctor_label">Doctor</span>
+            </div>
+            <h3 id="senior-appt-doctor" class="font-black text-slate-900 text-lg">Dr. K. Sundaram, MD (Cardiologist)</h3>
+            <p id="senior-appt-clinic" class="text-sm text-slate-600 font-semibold">Apollo Speciality Hospitals, Greams Rd, Chennai</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-teal-50 border border-teal-200 space-y-2">
+            <div class="text-sm font-bold text-teal-900 flex items-center space-x-2">
+              <i class="fa-regular fa-calendar-check text-teal-600"></i>
+              <span data-t="date_label">Scheduled Date & Time</span>
+            </div>
+            <h3 id="senior-appt-date" class="font-black text-slate-900 text-lg">Tuesday, Oct 6, 2026 &bull; 10:30 AM</h3>
+            <p id="senior-appt-notes" class="text-sm text-slate-600 font-semibold">Quarterly cardiology review & routine blood panel</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <a href="tel:+914428290200" class="flex-1 bg-teal-700 hover:bg-teal-800 text-white font-bold py-3.5 px-4 rounded-2xl text-center flex items-center justify-center space-x-2 shadow transition">
+            <i class="fa-solid fa-phone"></i>
+            <span data-t="call_clinic_btn">Call Hospital (+91 44 2829 0200)</span>
+          </a>
+          <button onclick="playVoiceReminder()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 px-4 rounded-2xl text-center flex items-center justify-center space-x-2 border border-slate-300 transition">
+            <i class="fa-solid fa-volume-high text-teal-600"></i>
+            <span data-t="set_reminder_btn">Voice Reminder Set</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. PANIC EMERGENCY BUTTON (PROMINENT RED OVERSIZED TARGET) -->
+      <div class="bg-red-50 border-4 border-red-500 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl">
+        <h2 class="text-2xl sm:text-3xl font-black text-red-900" data-t="panic_btn">
+          🚨 PANIC / GET HELP
+        </h2>
+        <p class="text-base text-red-700 font-semibold max-w-xl mx-auto" data-t="panic_subtitle">
+          Press in case of a fall, dizziness, or medical emergency
+        </p>
+
+        <button onclick="openPanicModal()" class="panic-pulse-btn w-full max-w-lg mx-auto bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-black text-2xl sm:text-3xl py-6 rounded-3xl shadow-xl shadow-red-600/40 flex items-center justify-center space-x-4 border-4 border-white transition-transform active:scale-95">
+          <i class="fa-solid fa-triangle-exclamation text-3xl sm:text-4xl"></i>
+          <span data-t="panic_btn">EMERGENCY SOS / அவசர உதவி</span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ================= VIEW 3: CAREGIVER / FAMILY DASHBOARD VIEW ================= -->
+    <section id="view-caregiver" class="hidden space-y-8 max-w-7xl mx-auto">
+      
+      <!-- Top Overview Bar: Senior Profile + Live Status Badge + Quick Actions -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          
+          <!-- Senior Info & Routine Status Badge -->
+          <div class="flex items-start sm:items-center space-x-4">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-3xl shadow-md">
+              👴
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h1 id="cg-senior-name" class="text-2xl sm:text-3xl font-black text-slate-900">
+                  Thiru. Ramanathan
+                </h1>
+                <span class="text-xs bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-full">
+                  74 yrs &bull; Blood Group: B+
+                </span>
+                
+                <!-- Dynamic Live Status Badge (GREEN, AMBER, RED) -->
+                <span id="cg-status-badge" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 status-glow-green"></span>
+                  <span id="cg-status-text">🟢 Routine Normal</span>
+                </span>
+              </div>
+
+              <p class="text-sm text-slate-600 font-semibold mt-1">
+                <i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>
+                <span id="cg-senior-loc">Plot 14, 2nd Cross Street, Anna Nagar, Chennai</span>
+                &bull;
+                <i class="fa-solid fa-battery-three-quarters text-emerald-600 mx-1"></i>
+                <span id="cg-senior-battery">88%</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Caregiver Instant Quick Actions -->
+          <div class="flex flex-wrap items-center gap-3">
+            <button onclick="openCallModal()" class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm sm:text-base flex items-center space-x-2 shadow-md shadow-emerald-600/20 transition active:scale-95">
+              <i class="fa-solid fa-phone"></i>
+              <span data-t="quick_call_senior">Call Senior</span>
+            </button>
+            <button onclick="openNudgeModal()" class="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm sm:text-base flex items-center space-x-2 shadow-md shadow-amber-500/20 transition active:scale-95">
+              <i class="fa-solid fa-bell"></i>
+              <span data-t="send_nudge_btn">Send Gentle Reminder</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- KEY VITALS & ROUTINE SUMMARY CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- Card 1: Check-in Status -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-slate-200 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500 mb-2">
+            <span class="text-xs font-black uppercase tracking-wider" data-t="summary_checkin_title">Morning Routine Check-In</span>
+            <span class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-sun"></i>
+            </span>
+          </div>
+          <div id="cg-checkin-val" class="text-3xl font-black text-slate-900">07:45 AM</div>
+          <div id="cg-checkin-sub" class="flex items-center space-x-1.5 mt-2 text-xs font-bold text-emerald-600">
+            <i class="fa-solid fa-circle-check"></i>
+            <span data-t="summary_checkin_ontime">Completed On Time</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Medication Adherence -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-slate-200 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500 mb-2">
+            <span class="text-xs font-black uppercase tracking-wider" data-t="summary_meds_title">Daily Medication Adherence</span>
+            <span class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-pills"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span id="cg-meds-percent" class="text-3xl font-black text-blue-600">75%</span>
+            <span id="cg-meds-ratio" class="text-sm font-bold text-slate-500">3 of 4 Pills</span>
+          </div>
+          <!-- Mini Progress Bar -->
+          <div class="w-full bg-slate-100 h-2.5 rounded-full mt-3 overflow-hidden">
+            <div id="cg-meds-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 75%"></div>
+          </div>
+        </div>
+
+        <!-- Card 3: Latest BP Reading -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-slate-200 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500 mb-2">
+            <span class="text-xs font-black uppercase tracking-wider" data-t="summary_bp_title">Latest Blood Pressure</span>
+            <span class="w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-heart-pulse"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span id="cg-bp-val" class="text-3xl font-black text-slate-900">122 / 82</span>
+            <span class="text-xs font-bold text-slate-500">mmHg</span>
+          </div>
+          <div id="cg-bp-status" class="flex items-center space-x-1.5 mt-2 text-xs font-bold text-emerald-600">
+            <i class="fa-solid fa-circle-check"></i>
+            <span data-t="summary_bp_status_normal">Within Safe Target Range</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Blood Sugar & Temp -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-slate-200 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500 mb-2">
+            <span class="text-xs font-black uppercase tracking-wider" data-t="summary_sugar_title">Blood Sugar & Temp</span>
+            <span class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-temperature-half"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline space-x-3">
+            <div>
+              <span id="cg-sugar-val" class="text-2xl font-black text-slate-900">114</span>
+              <span class="text-xs font-bold text-slate-500">mg/dL</span>
+            </div>
+            <span class="text-slate-300 font-bold">|</span>
+            <div>
+              <span id="cg-temp-val" class="text-2xl font-black text-slate-900">98.4</span>
+              <span class="text-xs font-bold text-slate-500">°F</span>
+            </div>
+          </div>
+          <p class="text-xs font-semibold text-slate-500 mt-2" data-t="summary_sugar_status">Last updated today</p>
+        </div>
+
+      </div>
+
+      <!-- MAIN SPLIT: 7-DAY VITALS TREND CHART + REAL-TIME TIMELINE -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- LEFT (2 COLS): 7-DAY VITALS TREND CHART (CHART.JS) -->
+        <div class="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900" data-t="chart_title">
+                7-Day Vitals Trend Analysis
+              </h2>
+              <p class="text-xs text-slate-500 font-semibold">Continuous routine monitoring telemetry</p>
+            </div>
+            
+            <!-- Chart view toggle buttons -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button id="chart-tab-bp" onclick="setChartType('bp')" class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-blue-700 shadow-sm" data-t="chart_tab_bp">
+                Blood Pressure (BP)
               </button>
+              <button id="chart-tab-sugar" onclick="setChartType('sugar')" class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all text-slate-600 hover:text-slate-900" data-t="chart_tab_sugar">
+                Blood Sugar (mg/dL)
+              </button>
+            </div>
+          </div>
+
+          <!-- Chart Canvas Container -->
+          <div class="relative w-full h-[320px]">
+            <canvas id="vitalsChart"></canvas>
+          </div>
+
+          <!-- Target reference legend -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs font-semibold text-slate-600 border-t border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+              <span data-t="chart_target_bp_systolic">Systolic Limit (130 mmHg)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-indigo-400 inline-block"></span>
+              <span data-t="chart_target_bp_diastolic">Diastolic Limit (85 mmHg)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+              <span data-t="chart_target_sugar">Fasting Upper Limit (125 mg/dL)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT (1 COL): REAL-TIME ACTIVITY FEED / TIMELINE -->
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+              <div>
+                <h2 class="text-xl font-black text-slate-900" data-t="timeline_title">
+                  Real-Time Activity Feed
+                </h2>
+                <p class="text-xs text-slate-500 font-semibold">Sequential chronological events</p>
+              </div>
+              <span class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </span>
             </div>
 
             <!-- Timeline Filter Pills -->
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold">
-              <button onclick="filterTimeline('all')" id="tl-filter-all" class="px-2.5 py-1 rounded-lg bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">All</button>
-              <button onclick="filterTimeline('checkin')" id="tl-filter-checkin" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Check-Ins</button>
-              <button onclick="filterTimeline('medication')" id="tl-filter-medication" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Meds</button>
-              <button onclick="filterTimeline('vitals')" id="tl-filter-vitals" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Vitals</button>
-              <button onclick="filterTimeline('alert')" id="tl-filter-alert" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Alerts</button>
+            <div class="flex items-center space-x-2 py-3 overflow-x-auto text-xs font-bold">
+              <button onclick="filterTimeline('all')" class="timeline-filter-btn px-2.5 py-1 rounded-lg bg-slate-900 text-white" data-filter="all" data-t="timeline_filter_all">All</button>
+              <button onclick="filterTimeline('medication')" class="timeline-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200" data-filter="medication" data-t="timeline_filter_meds">Meds</button>
+              <button onclick="filterTimeline('vitals')" class="timeline-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200" data-filter="vitals" data-t="timeline_filter_vitals">Vitals</button>
+              <button onclick="filterTimeline('alerts')" class="timeline-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200" data-filter="alerts" data-t="timeline_filter_alerts">Alerts</button>
             </div>
 
-            <!-- Timeline List Container -->
-            <div id="cg-timeline-list" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-              <!-- Rendered dynamically by app.js -->
-            </div>
-
-            <!-- Quick Add Note Form -->
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-700">
-              <form onsubmit="handleQuickNoteSubmit(event)" class="flex gap-2">
-                <input type="text" id="quick-note-input" placeholder="Add quick caregiver note..." class="flex-1 p-2 rounded-xl text-xs border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-white">
-                <button type="submit" class="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-xs">
-                  Post
-                </button>
-              </form>
+            <!-- Feed list (Scrollable max height) -->
+            <div id="caregiver-timeline-feed" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+              <!-- Populated dynamically via renderTimelineFeed() -->
             </div>
           </div>
 
-          <!-- EMERGENCY CONTACTS DIRECTORY -->
-          <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>🚨</span> Emergency &amp; Care Contacts
-                </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400">One-tap voice call and SMS simulation</p>
-              </div>
-              <span class="text-xs font-bold text-emerald-600">5 Registered</span>
-            </div>
-
-            <div id="cg-contacts-list" class="space-y-2.5">
-              <!-- Rendered dynamically by app.js -->
-            </div>
+          <!-- Bottom info -->
+          <div class="pt-3 border-t border-slate-100 text-center">
+            <span class="text-xs text-slate-400 font-medium">Automatic sync every 2.5s with server</span>
           </div>
-
         </div>
 
+      </div>
+
+      <!-- SIMULATED SMS / DISPATCH INBOX CARD -->
+      <div id="cg-sms-container" class="bg-slate-900 text-slate-100 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl">
+              <i class="fa-solid fa-comment-sms"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-lg text-white" data-t="sim_sms_inbox">Simulated SMS & Push Alert Dispatch Log</h3>
+              <p class="text-xs text-slate-400">Automated carrier gateway alerts triggered on escalations</p>
+            </div>
+          </div>
+          <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-mono">Gateway: Active</span>
+        </div>
+
+        <div id="simulated-sms-list" class="space-y-2">
+          <!-- Populated dynamically -->
+        </div>
       </div>
 
     </section>
 
   </main>
 
-  <!-- ========================================================================= -->
-  <!-- 3. INTERACTIVE HACKATHON SIMULATOR BAR (Fixed at bottom for evaluators)   -->
-  <!-- ========================================================================= -->
-  <footer class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-amber-300 dark:border-slate-700 shadow-2xl">
+  <!-- ================= FIXED BOTTOM HACKATHON DEMO SIMULATOR (CORE REQUIREMENT) ================= -->
+  <aside id="simulator-bar" class="fixed bottom-0 inset-x-0 z-50 bg-slate-950/95 text-white border-t-2 border-slate-800 shadow-2xl transition-all">
     <div class="max-w-7xl mx-auto px-4 py-3">
       
-      <!-- Collapsible header / simulation controls -->
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <!-- Top Header Row of Simulator -->
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center space-x-2">
+          <span class="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider" data-t="sim_badge">
+            Tester Cockpit
+          </span>
+          <span class="text-xs font-black tracking-wide text-slate-200" data-t="sim_title">
+            HACKATHON DEMO SIMULATOR
+          </span>
+          <span class="text-xs text-slate-400 hidden md:inline">&bull;</span>
+          <p class="text-xs text-slate-400 hidden md:inline" data-t="sim_desc">
+            Simulate edge cases in real-time to observe automatic state synchronization:
+          </p>
+        </div>
+
+        <!-- Toggle Collapse Simulator -->
+        <button onclick="toggleSimulatorCollapse()" id="sim-collapse-toggle" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800">
+          <i class="fa-solid fa-chevron-down" id="sim-chevron"></i>
+        </button>
+      </div>
+
+      <!-- Simulator Interactive Action Buttons -->
+      <div id="sim-actions-row" class="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
         
-        <!-- Left: Simulator Title & Info -->
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-amber-500 animate-ping"></span>
-          <span class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-            ⚡ Demo Controls / Simulator:
-          </span>
-          <span class="text-xs text-slate-500 dark:text-slate-400 hidden xl:inline">
-            Test anomalies &amp; real-time dual-role responses
-          </span>
-        </div>
+        <!-- Button 1: Simulate Missed Check-In -->
+        <button onclick="runSimulation('missed_checkin')" class="bg-amber-600/90 hover:bg-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm py-2.5 px-3 rounded-xl shadow transition active:scale-95 flex items-center justify-center space-x-2 border border-amber-400">
+          <i class="fa-solid fa-clock text-base"></i>
+          <span data-t="sim_missed_checkin">Simulate Missed Check-In</span>
+        </button>
 
-        <!-- Center: The 4 Key Simulation Action Buttons -->
-        <div class="flex flex-wrap items-center gap-2">
-          
-          <!-- SIMULATE MISSED CHECK-IN -->
-          <button onclick="triggerSimulation('missed_checkin')" title="Flips status to 🟡 Delayed & triggers gentle prompt" class="px-3.5 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-950 dark:hover:bg-amber-900 dark:text-amber-200 font-extrabold text-xs border border-amber-300 dark:border-amber-800 flex items-center gap-1.5 transition-transform active:scale-95 shadow-sm">
-            <span>🟡</span>
-            <span>Simulate Missed Check-In</span>
-          </button>
+        <!-- Button 2: Simulate Caregiver Escalation -->
+        <button onclick="runSimulation('escalation')" class="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs sm:text-sm py-2.5 px-3 rounded-xl shadow transition active:scale-95 flex items-center justify-center space-x-2 border border-red-400">
+          <i class="fa-solid fa-triangle-exclamation text-base"></i>
+          <span data-t="sim_escalation">Simulate Escalation</span>
+        </button>
 
-          <!-- SIMULATE NO RESPONSE ESCALATION -->
-          <button onclick="triggerSimulation('no_response')" title="Flips status to 🔴 Alert & escalates to caregiver" class="px-3.5 py-1.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-900 dark:bg-red-950 dark:hover:bg-red-900 dark:text-red-200 font-extrabold text-xs border border-red-300 dark:border-red-800 flex items-center gap-1.5 transition-transform active:scale-95 shadow-sm">
-            <span>🔴</span>
-            <span>Simulate No Response</span>
-          </button>
+        <!-- Button 3: Simulate Senior Check-In -->
+        <button onclick="runSimulation('senior_checkin')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm py-2.5 px-3 rounded-xl shadow transition active:scale-95 flex items-center justify-center space-x-2 border border-emerald-400">
+          <i class="fa-solid fa-circle-check text-base"></i>
+          <span data-t="sim_checkin">Simulate Senior Check-In</span>
+        </button>
 
-          <!-- SIMULATE SENIOR SOS PANIC -->
-          <button onclick="triggerSimulation('panic')" title="Simulates Eleanor pressing the emergency SOS button" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs flex items-center gap-1.5 transition-transform active:scale-95 shadow-sm">
-            <span>🚨</span>
-            <span>Simulate Panic / SOS</span>
-          </button>
+        <!-- Button 4: Reset Demo State -->
+        <button onclick="runSimulation('reset')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs sm:text-sm py-2.5 px-3 rounded-xl shadow transition active:scale-95 flex items-center justify-center space-x-2 border border-slate-700">
+          <i class="fa-solid fa-rotate-left text-base text-blue-400"></i>
+          <span data-t="sim_reset">Reset Demo State</span>
+        </button>
 
-          <!-- SIMULATE ROUTINE COMPLETE -->
-          <button onclick="triggerSimulation('routine_complete')" title="Simulates check-in + meds taken + vitals logged" class="px-3.5 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-200 font-extrabold text-xs border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5 transition-transform active:scale-95 shadow-sm">
-            <span>🟢</span>
-            <span>Routine Complete</span>
-          </button>
-
-          <!-- FAST-FORWARD TIME SIMULATION -->
-          <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-xl border border-slate-300 dark:border-slate-700 text-xs">
-            <span class="font-bold text-slate-700 dark:text-slate-300">⏰ Fast-Forward:</span>
-            <select id="sim-time-select" onchange="triggerTimeSimulation(this.value)" class="bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-lg px-2 py-0.5 border border-slate-300 dark:border-slate-600 focus:outline-none">
-              <option value="08:00 AM">8:00 AM (Morning Check-In)</option>
-              <option value="01:00 PM">1:00 PM (Lunch Meds)</option>
-              <option value="04:00 PM">4:00 PM (Dr. Smith Visit)</option>
-              <option value="08:00 PM">8:00 PM (Evening Meds)</option>
-            </select>
-          </div>
-
-          <!-- RESET DAY DATA -->
-          <button onclick="triggerSimulation('reset')" title="Resets state to baseline" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 font-extrabold text-xs border border-slate-300 dark:border-slate-600 flex items-center gap-1.5 transition-transform active:scale-95">
-            <span>🔄</span>
-            <span>Reset Day Data</span>
-          </button>
-
-        </div>
+        <!-- Button 5: Flip Portal View -->
+        <button onclick="flipPortalView()" class="col-span-2 sm:col-span-1 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm py-2.5 px-3 rounded-xl shadow transition active:scale-95 flex items-center justify-center space-x-2 border border-blue-400">
+          <i class="fa-solid fa-right-left text-base"></i>
+          <span data-t="sim_flip_role">Flip View</span>
+        </button>
 
       </div>
 
     </div>
-  </footer>
+  </aside>
 
-  <!-- ========================================================================= -->
-  <!-- MODALS (EMERGENCY SOS, SIMULATED PHONE CALL, SMS NOTIFICATION)           -->
-  <!-- ========================================================================= -->
+  <!-- ================= MODALS & OVERLAYS ================= -->
 
-  <!-- 1. EMERGENCY SOS DIALOG MODAL -->
-  <div id="sos-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 border-4 border-red-500 shadow-2xl text-center space-y-6 animate-scale-up">
-      <div class="w-20 h-20 mx-auto rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center text-4xl animate-pulse">
+  <!-- 1. PANIC EMERGENCY COUNTDOWN MODAL -->
+  <div id="modal-panic" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 text-center space-y-6 border-4 border-red-600 shadow-2xl relative animate-bounce-once">
+      
+      <div class="w-20 h-20 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-4xl mx-auto panic-pulse-btn">
         🚨
       </div>
-      <div>
-        <h2 class="text-3xl font-black text-red-600 dark:text-red-400">
-          Emergency SOS Triggered!
-        </h2>
-        <p class="text-base font-semibold text-slate-700 dark:text-slate-300 mt-2">
-          Alert sent to David Vance (+1-206-555-0192) and neighbor Clara Higgins.
-        </p>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          GPS Location Shared: Apt 4B, Pinecrest Senior Living, Seattle, WA
+
+      <div class="space-y-2">
+        <h3 class="text-3xl font-black text-red-700" data-t="panic_modal_title">EMERGENCY ALARM ACTIVATING</h3>
+        <p class="text-base text-slate-700 font-semibold" data-t="panic_modal_desc">
+          Broadcasting emergency alert, GPS location, and SMS to Dr. Priya and 108 Emergency Services.
         </p>
       </div>
 
-      <!-- Quick Action Cards in SOS -->
-      <div class="space-y-3 text-left">
-        <div class="p-3 bg-red-50 dark:bg-slate-800 rounded-2xl border border-red-200 dark:border-slate-700 flex items-center justify-between">
-          <div>
-            <p class="font-bold text-slate-900 dark:text-white text-sm">Call 911 Emergency Dispatch</p>
-            <p class="text-xs text-slate-500">Local EMS &amp; Fire Station 8</p>
-          </div>
-          <button onclick="simulateCall('Emergency Dispatch', '911', 'EMS First Responders')" class="px-4 py-2 rounded-xl bg-red-600 text-white font-black text-sm hover:bg-red-700">
-            Call 911
-          </button>
-        </div>
-
-        <div class="p-3 bg-sky-50 dark:bg-slate-800 rounded-2xl border border-sky-200 dark:border-slate-700 flex items-center justify-between">
-          <div>
-            <p class="font-bold text-slate-900 dark:text-white text-sm">Call David Vance (Son)</p>
-            <p class="text-xs text-slate-500">5 minutes away (In route)</p>
-          </div>
-          <button onclick="simulateCall('David Vance (Son)', '(206) 555-0192', 'Primary Caregiver')" class="px-4 py-2 rounded-xl bg-sky-600 text-white font-black text-sm hover:bg-sky-700">
-            Call David
-          </button>
-        </div>
+      <!-- 5-Second Countdown Display -->
+      <div class="bg-red-50 p-6 rounded-2xl border-2 border-red-200 space-y-2">
+        <div class="text-sm font-bold text-red-800 uppercase" data-t="sos_countdown_msg">Alert will broadcast in</div>
+        <div id="panic-countdown" class="text-6xl font-black text-red-600">5</div>
+        <div class="text-xs text-red-500 font-bold" data-t="seconds_unit">seconds</div>
       </div>
 
-      <div class="pt-2 flex items-center justify-center gap-3">
-        <button onclick="closeSosModal()" class="px-6 py-3 rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 font-bold text-sm">
-          Keep Alert Active / Close Modal
+      <!-- Action Buttons -->
+      <div class="space-y-3">
+        <button onclick="cancelPanicCountdown()" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-lg font-black py-4 rounded-2xl transition shadow-lg" data-t="cancel_sos_btn">
+          CANCEL (False Alarm / தவறாக அழுத்தப்பட்டது)
         </button>
-        <button onclick="resolveCurrentAlert('Eleanor (False Alarm Cleared)')" class="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm">
-          False Alarm (Clear Alert)
-        </button>
+        <a href="tel:108" class="w-full bg-red-600 hover:bg-red-700 text-white text-lg font-black py-4 rounded-2xl transition shadow-lg flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-phone-volume"></i>
+          <span data-t="call_108_btn">Call 108 Ambulance Now</span>
+        </a>
       </div>
+
     </div>
   </div>
 
-  <!-- 2. SIMULATED PHONE CALL MODAL -->
-  <div id="call-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 text-white rounded-3xl max-w-sm w-full p-8 text-center space-y-6 border border-slate-700 shadow-2xl">
-      <div class="w-24 h-24 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-4xl border-2 border-slate-600 animate-pulse">
-        📞
-      </div>
-      <div>
-        <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest">CareConnect Telephony</p>
-        <h3 id="call-modal-name" class="text-2xl font-black mt-1">David Vance</h3>
-        <p id="call-modal-number" class="text-sm text-slate-400 font-mono mt-0.5">(206) 555-0192</p>
-        <p id="call-modal-status" class="text-xs text-sky-400 mt-2 font-medium">Connecting call via WebRTC...</p>
-      </div>
-      
-      <div class="flex items-center justify-center gap-6 py-4">
-        <div class="text-center">
-          <button class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-lg hover:bg-slate-700">
-            🔇
-          </button>
-          <span class="text-[10px] text-slate-400 block mt-1">Mute</span>
-        </div>
-        <div class="text-center">
-          <button class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-lg hover:bg-slate-700">
-            🔊
-          </button>
-          <span class="text-[10px] text-slate-400 block mt-1">Speaker</span>
-        </div>
-        <div class="text-center">
-          <button class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-lg hover:bg-slate-700">
-            📹
-          </button>
-          <span class="text-[10px] text-slate-400 block mt-1">Video</span>
-        </div>
+  <!-- 2. VOICE CHECK-IN ASSISTANT MODAL -->
+  <div id="modal-voice" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center space-y-6 border border-slate-200 shadow-2xl">
+      <div class="w-20 h-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
+        <i class="fa-solid fa-microphone text-4xl text-blue-600"></i>
       </div>
 
-      <button onclick="closeCallModal()" class="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-base shadow-lg shadow-red-600/30">
-        End Call
+      <div class="space-y-1">
+        <h3 class="text-2xl font-black text-slate-900" data-t="voice_modal_title">Voice Check-In Assistant</h3>
+        <p class="text-sm text-slate-600 font-medium" data-t="voice_modal_desc">
+          Speak clearly or select a voice command below:
+        </p>
+      </div>
+
+      <!-- Audio wave visualizer -->
+      <div class="flex items-center justify-center space-x-1.5 h-12 bg-blue-50 rounded-2xl border border-blue-200">
+        <div class="w-2 bg-blue-500 rounded-full audio-bar"></div>
+        <div class="w-2 bg-blue-600 rounded-full audio-bar"></div>
+        <div class="w-2 bg-indigo-500 rounded-full audio-bar"></div>
+        <div class="w-2 bg-blue-600 rounded-full audio-bar"></div>
+        <div class="w-2 bg-blue-500 rounded-full audio-bar"></div>
+      </div>
+
+      <div id="voice-recognized-text" class="text-base font-extrabold text-blue-800 bg-blue-50 p-3 rounded-xl border border-blue-200 min-h-[48px] flex items-center justify-center">
+        Listening... Try speaking now!
+      </div>
+
+      <!-- Quick Simulated Voice Command Buttons -->
+      <div class="space-y-2 text-left">
+        <button onclick="simulateVoiceCommand('awake')" class="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-300 text-sm font-bold text-slate-800 flex items-center space-x-2 transition">
+          <span>🗣️</span>
+          <span data-t="voice_cmd_awake">"I am awake and doing well!"</span>
+        </button>
+        <button onclick="simulateVoiceCommand('meds')" class="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-300 text-sm font-bold text-slate-800 flex items-center space-x-2 transition">
+          <span>🗣️</span>
+          <span data-t="voice_cmd_meds">"I took my morning pills"</span>
+        </button>
+        <button onclick="simulateVoiceCommand('bp')" class="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-300 text-sm font-bold text-slate-800 flex items-center space-x-2 transition">
+          <span>🗣️</span>
+          <span data-t="voice_cmd_bp">"My blood pressure is 120 over 80"</span>
+        </button>
+      </div>
+
+      <button onclick="closeVoiceCheckinModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-xl transition" data-t="voice_close">
+        Close Voice Assistant
       </button>
     </div>
   </div>
 
-  <!-- 3. SIMULATED SMS MODAL -->
-  <div id="sms-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">💬</span>
-          <div>
-            <h3 id="sms-modal-recipient" class="font-black text-slate-900 dark:text-white text-base">SMS to David Vance</h3>
-            <p id="sms-modal-phone" class="text-xs text-slate-500 font-mono">(206) 555-0192</p>
+  <!-- 3. CAREGIVER NUDGE SENDER MODAL -->
+  <div id="modal-nudge" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 border border-slate-200 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-bell"></i>
           </div>
+          <h3 class="text-xl font-black text-slate-900" data-t="nudge_modal_title">Send Reminder to Senior Portal</h3>
         </div>
-        <button onclick="closeSmsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        <button onclick="closeNudgeModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
       </div>
 
-      <div class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl space-y-2 max-h-60 overflow-y-auto">
-        <div class="bg-sky-600 text-white p-3 rounded-2xl rounded-tr-none text-xs ml-8 shadow-xs">
-          <p class="font-semibold" id="sms-preview-text">
-            [CareConnect Automated Alert]: Morning check-in notification from Eleanor Vance at 8:15 AM. Status: All routines normal.
-          </p>
-          <span class="text-[10px] opacity-75 block text-right mt-1">Sent via Twilio Carrier Gateway</span>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1">Custom Reminder Message</label>
+          <textarea id="custom-nudge-text" rows="3" class="w-full p-3 rounded-2xl border-2 border-slate-300 focus:border-amber-500 font-medium text-slate-800 text-sm" placeholder="e.g. Appa, please drink some water and take your afternoon multivitamin."></textarea>
+        </div>
+
+        <!-- Presets -->
+        <div class="space-y-1.5">
+          <span class="text-xs font-bold text-slate-500 uppercase">Or Choose a Quick Preset:</span>
+          <button onclick="setNudgePreset(1)" class="w-full text-left text-xs font-semibold p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 block" data-t="nudge_preset_1">
+            "Appa, did you have your lunch and medicines?"
+          </button>
+          <button onclick="setNudgePreset(2)" class="w-full text-left text-xs font-semibold p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 block" data-t="nudge_preset_2">
+            "Don't forget your doctor check-up on Tuesday!"
+          </button>
+          <button onclick="setNudgePreset(3)" class="w-full text-left text-xs font-semibold p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 block" data-t="nudge_preset_3">
+            "Calling you in 10 minutes to chat!"
+          </button>
         </div>
       </div>
 
-      <form onsubmit="handleSendCustomSms(event)" class="space-y-3">
-        <textarea id="custom-sms-text" rows="2" placeholder="Type a message or reminder..." class="w-full p-3 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"></textarea>
-        <div class="flex items-center justify-end gap-2">
-          <button type="button" onclick="closeSmsModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400">
-            Cancel
-          </button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-sm">
-            Send SMS Message
-          </button>
-        </div>
-      </form>
+      <div class="flex items-center space-x-3 pt-2">
+        <button onclick="closeNudgeModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-2xl transition" data-t="close_btn">
+          Cancel
+        </button>
+        <button onclick="sendCaregiverNudge()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-2xl transition shadow flex items-center justify-center space-x-2" data-t="send_btn">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>Send Notification</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- 4. ADD CAREGIVER NOTE MODAL -->
-  <div id="note-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-        <h3 class="font-black text-slate-900 dark:text-white text-base flex items-center gap-2">
-          <span>➕</span> Add Caregiver Note
-        </h3>
-        <button onclick="closeAddNoteModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+  <!-- 4. CAREGIVER DIRECT CALL MODAL (SIMULATED CALL) -->
+  <div id="modal-call" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-6 border border-slate-200 shadow-2xl">
+      <div class="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto animate-pulse">
+        <i class="fa-solid fa-phone-volume text-3xl text-emerald-600"></i>
       </div>
-
-      <form onsubmit="handleModalNoteSubmit(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Author</label>
-          <input type="text" id="note-author-input" value="David Vance (Son &amp; Caregiver)" class="w-full p-2.5 rounded-xl text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white font-medium">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Care Note</label>
-          <textarea id="note-text-input" rows="3" required placeholder="e.g. Dropped off weekly medication pillbox and fresh groceries. Spoke on phone, sounded very upbeat." class="w-full p-3 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"></textarea>
-        </div>
-        <div class="flex items-center justify-end gap-2">
-          <button type="button" onclick="closeAddNoteModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400">
-            Cancel
-          </button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm">
-            Save Note to Timeline
-          </button>
-        </div>
-      </form>
+      <div>
+        <h3 class="text-2xl font-black text-slate-900">Calling Thiru. Ramanathan</h3>
+        <p class="text-base text-slate-500 font-semibold mt-1">+91 98401 23456</p>
+        <span class="inline-block mt-3 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full">
+          Ringing Senior's Handset...
+        </span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <a href="tel:+919840123456" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl transition text-sm">
+          Open Phone App
+        </a>
+        <button onclick="closeCallModal()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-2xl transition text-sm">
+          End Call
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- CareConnect Client Script -->
+  <!-- 5. TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-24 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- Scripts -->
+  <script src="translations.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

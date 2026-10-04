@@ -1,0 +1,172 @@
+{
+  "senior": {
+    "id": "SNR-101",
+    "name": "Thiru. Ramanathan",
+    "name_ta": "திரு. ராமநாதன்",
+    "age": 74,
+    "blood_group": "B+",
+    "location": "Plot 14, 2nd Cross Street, Anna Nagar, Chennai",
+    "location_ta": "மனை 14, 2வது குறுக்குத் தெரு, அண்ணா நகர், சென்னை",
+    "phone": "+91 98401 23456",
+    "pin": "1234",
+    "battery": 88,
+    "emergency_contact": {
+      "name": "Dr. Priya Ramanathan (Daughter)",
+      "name_ta": "டாக்டர் பிரியா ராமநாதன் (மகள்)",
+      "phone": "+91 98765 43210",
+      "email": "priya.care@gmail.com"
+    }
+  },
+  "caregiver": {
+    "name": "Dr. Priya Ramanathan",
+    "name_ta": "டாக்டர் பிரியா ராமநாதன்",
+    "email": "priya.care@gmail.com",
+    "role": "Primary Caregiver & Daughter",
+    "role_ta": "முதன்மை பராமரிப்பாளர் & மகள்",
+    "phone": "+91 98765 43210"
+  },
+  "status": {
+    "current": "routine_normal",
+    "label_en": "Routine Normal",
+    "label_ta": "வழக்கமான நிலை",
+    "last_updated": "2026-10-03T08:45:00"
+  },
+  "checkin": {
+    "completed": true,
+    "time": "07:45 AM",
+    "timestamp": "2026-10-03T07:45:00",
+    "method": "One-Tap Morning Check-In",
+    "method_ta": "ஒரே-தொடுதல் காலை உறுதிப்படுத்தல்"
+  },
+  "medications": [
+    {
+      "id": 1,
+      "name": "Amlodipine (Blood Pressure)",
+      "name_ta": "அம்லோடிபைன் (ரத்த அழுத்தம்)",
+      "dose": "5 mg",
+      "time": "Morning (08:00 AM)",
+      "time_ta": "காலை (08:00 மணி)",
+      "timing": "morning",
+      "taken": true,
+      "taken_at": "08:10 AM"
+    },
+    {
+      "id": 2,
+      "name": "Metformin (Blood Sugar)",
+      "name_ta": "மெட்ஃபோர்மின் (சர்க்கரை அளவு)",
+      "dose": "500 mg",
+      "time": "Morning after food (08:30 AM)",
+      "time_ta": "காலை உணவுக்குப் பின் (08:30 மணி)",
+      "timing": "morning",
+      "taken": true,
+      "taken_at": "08:35 AM"
+    },
+    {
+      "id": 3,
+      "name": "Multivitamin & Calcium",
+      "name_ta": "மல்டிவைட்டமின் & கால்சியம்",
+      "dose": "1 மாத்திரை / Tablet",
+      "time": "Afternoon (01:30 PM)",
+      "time_ta": "மதியம் (01:30 மணி)",
+      "timing": "afternoon",
+      "taken": false,
+      "taken_at": null
+    },
+    {
+      "id": 4,
+      "name": "Atorvastatin (Cholesterol / Heart)",
+      "name_ta": "அட்டர்வாஸ்டாடின் (கொலஸ்ட்ரால்)",
+      "dose": "10 mg",
+      "time": "Night before sleep (09:00 PM)",
+      "time_ta": "இரவு தூங்கும் முன் (09:00 மணி)",
+      "timing": "night",
+      "taken": false,
+      "taken_at": null
+    }
+  ],
+  "vitals": {
+    "latest": {
+      "systolic": 122,
+      "diastolic": 82,
+      "blood_sugar": 114,
+      "temperature": 98.4,
+      "recorded_at": "Today, 08:45 AM",
+      "recorded_at_ta": "இன்று, முற்பகல் 08:45"
+    },
+    "history_7_days": [
+      { "date": "Sep 27", "date_ta": "செப் 27", "systolic": 128, "diastolic": 84, "blood_sugar": 124, "temperature": 98.6 },
+      { "date": "Sep 28", "date_ta": "செப் 28", "systolic": 125, "diastolic": 82, "blood_sugar": 121, "temperature": 98.4 },
+      { "date": "Sep 29", "date_ta": "செப் 29", "systolic": 127, "diastolic": 83, "blood_sugar": 118, "temperature": 98.5 },
+      { "date": "Sep 30", "date_ta": "செப் 30", "systolic": 130, "diastolic": 85, "blood_sugar": 122, "temperature": 98.7 },
+      { "date": "Oct 01", "date_ta": "அக் 01", "systolic": 120, "diastolic": 80, "blood_sugar": 115, "temperature": 98.4 },
+      { "date": "Oct 02", "date_ta": "அக் 02", "systolic": 124, "diastolic": 82, "blood_sugar": 119, "temperature": 98.6 },
+      { "date": "Oct 03", "date_ta": "அக் 03", "systolic": 122, "diastolic": 82, "blood_sugar": 114, "temperature": 98.4 }
+    ]
+  },
+  "appointment": {
+    "doctor": "Dr. K. Sundaram, MD (Cardiologist)",
+    "doctor_ta": "டாக்டர் கே. சுந்தரம், MD (இதய சிகிச்சை நிபுணர்)",
+    "clinic": "Apollo Speciality Hospitals, Greams Rd, Chennai",
+    "clinic_ta": "அப்பல்லோ சிறப்பு மருத்துவமனை, கிரீம்ஸ் சாலை, சென்னை",
+    "date": "Tuesday, Oct 6, 2026",
+    "date_ta": "செவ்வாய், அக் 6, 2026",
+    "time": "10:30 AM",
+    "time_ta": "முற்பகல் 10:30 மணி",
+    "phone": "+91 44 2829 0200",
+    "notes": "Quarterly cardiology review & routine blood panel",
+    "notes_ta": "காலாண்டு இதயப் பரிசோதனை மற்றும் ரத்தப் பரிசோதனை"
+  },
+  "timeline": [
+    {
+      "id": 1,
+      "type": "checkin",
+      "title_en": "Morning Check-In Received",
+      "title_ta": "காலை நலம் சரிபார்ப்பு பெறப்பட்டது",
+      "desc_en": "Thiru. Ramanathan tapped 'I am Awake & Doing Well!'",
+      "desc_ta": "திரு. ராமநாதன் 'நான் விழித்துக்கொண்டேன், நலமாக உள்ளேன்!' என்பதை உறுதிசெய்தார்",
+      "timestamp": "2026-10-03T07:45:00",
+      "time_str": "07:45 AM",
+      "icon": "fa-sun",
+      "badge_color": "emerald"
+    },
+    {
+      "id": 2,
+      "type": "medication",
+      "title_en": "Morning Medication Taken",
+      "title_ta": "காலை மாத்திரை உட்கொள்ளப்பட்டது",
+      "desc_en": "Amlodipine 5mg marked as taken",
+      "desc_ta": "அம்லோடிபைன் 5mg உட்கொள்ளப்பட்டது எனப் பதிவு செய்யப்பட்டது",
+      "timestamp": "2026-10-03T08:10:00",
+      "time_str": "08:10 AM",
+      "icon": "fa-pills",
+      "badge_color": "blue"
+    },
+    {
+      "id": 3,
+      "type": "medication",
+      "title_en": "Post-Breakfast Pill Taken",
+      "title_ta": "காலை உணவுக்குப் பின் மாத்திரை உட்கொள்ளப்பட்டது",
+      "desc_en": "Metformin 500mg marked as taken",
+      "desc_ta": "மெட்ஃபோர்மின் 500mg உட்கொள்ளப்பட்டது எனப் பதிவு செய்யப்பட்டது",
+      "timestamp": "2026-10-03T08:35:00",
+      "time_str": "08:35 AM",
+      "icon": "fa-pills",
+      "badge_color": "blue"
+    },
+    {
+      "id": 4,
+      "type": "vitals",
+      "title_en": "Daily Vitals Recorded",
+      "title_ta": "தினசரி உடல் நலக் குறியீடுகள் பதிவு செய்யப்பட்டன",
+      "desc_en": "BP: 122/82 mmHg | Blood Sugar: 114 mg/dL | Temp: 98.4°F",
+      "desc_ta": "ரத்த அழுத்தம்: 122/82 mmHg | சர்க்கரை: 114 mg/dL | உடல் வெப்பநிலை: 98.4°F",
+      "timestamp": "2026-10-03T08:45:00",
+      "time_str": "08:45 AM",
+      "icon": "fa-heart-pulse",
+      "badge_color": "purple"
+    }
+  ],
+  "nudges": [],
+  "active_alert": null,
+  "simulated_sms": []
+}

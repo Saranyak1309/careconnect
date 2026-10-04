@@ -1,809 +1,1105 @@
-/**
- * CareConnect Client Application
- * Full-stack Elderly Care & Routine Monitoring Platform
- */
+// CareConnect Interactive Client Application
+// Complete dual portal, bilingual engine, real-time sync & simulator
 
-// Application State
+let currentLang = localStorage.getItem('careconnect_lang') || 'en';
+let currentRole = localStorage.getItem('careconnect_role') || 'portal_select';
 let appState = null;
-let currentView = 'senior'; // 'senior' | 'caregiver' | 'split'
-let currentChartTab = 'bp'; // 'bp' | 'sugar' | 'hr'
+let chartInstance = null;
+let activeChartType = 'bp'; // 'bp' or 'sugar'
 let timelineFilter = 'all';
-let isAudioEnabled = true;
-let vitalsChartInstance = null;
-let speechRecognizer = null;
+let panicCountdownTimer = null;
+let panicSecondsLeft = 5;
 let audioCtx = null;
 
-// ==========================================
-// 1. INITIALIZATION & SERVER-SENT EVENTS
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', () => {
-  fetchInitialState();
-  initSSE();
-  initVoiceRecognition();
-  setupAudioContext();
-
-  // Handle stored preferences
-  if (localStorage.getItem('careconnect_contrast') === 'true') {
-    document.body.classList.add('high-contrast');
+// Initialize Web Audio Context on first user interaction
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
   }
-  if (localStorage.getItem('careconnect_dark') === 'true') {
-    document.documentElement.classList.add('dark');
-    const icon = document.getElementById('dark-icon');
-    if (icon) icon.textContent = '☀️';
-  }
-  const savedFontSize = localStorage.getItem('careconnect_font') || 'md';
-  changeFontSize(savedFontSize, false);
-});
-
-// Setup Web Audio API Synthesizer (for chimes, clicks, sirens)
-function setupAudioContext() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (AudioContextClass) {
-    audioCtx = new AudioContextClass();
-  }
-}
-
-function ensureAudioReady() {
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+  return audioCtx;
 }
 
-// Synthesizer chime generator
-function playSound(type) {
-  if (!isAudioEnabled) return;
+// Warm Positive Chime for Senior Check-in and actions
+function playPositiveChime() {
   try {
-    ensureAudioReady();
-    if (!audioCtx) return;
-
-    const now = audioCtx.currentTime;
-
-    if (type === 'checkin' || type === 'success') {
-      // Pleasant upward harmonic arpeggio (C5 -> E5 -> G5 -> C6)
-      const notes = [523.25, 659.25, 783.99, 1046.50];
-      notes.forEach((freq, idx) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
-        gain.gain.setValueAtTime(0.18, now + idx * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now + idx * 0.1);
-        osc.stop(now + idx * 0.1 + 0.45);
-      });
-    } else if (type === 'pill' || type === 'pop') {
-      // Soft pleasant pop bell
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(880, now);
-      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.1);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.36);
-    } else if (type === 'vitals') {
-      // Reassuring medical ding
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    // 3-tone harmonic arpeggio: C5 -> E5 -> G5
+    const freqs = [523.25, 659.25, 783.99];
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, now); // D5
-      osc.frequency.setValueAtTime(880.00, now + 0.15); // A5
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+      
+      gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.4);
+      
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.55);
-    } else if (type === 'alert' || type === 'sos') {
-      // Pulsing siren alarm
-      for (let i = 0; i < 3; i++) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(700, now + i * 0.3);
-        osc.frequency.linearRampToValueAtTime(950, now + i * 0.3 + 0.15);
-        osc.frequency.linearRampToValueAtTime(700, now + i * 0.3 + 0.28);
-        gain.gain.setValueAtTime(0.25, now + i * 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.3 + 0.28);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now + i * 0.3);
-        osc.stop(now + i * 0.3 + 0.29);
-      }
+      gain.connect(ctx.destination);
+      
+      osc.start(now + idx * 0.12);
+      osc.stop(now + idx * 0.12 + 0.45);
+    });
+  } catch (e) {
+    console.warn("Audio chime error:", e);
+  }
+}
+
+// Emergency Alarm Siren Tone
+let sirenOsc = null;
+let sirenGain = null;
+function playEmergencySiren() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (sirenOsc) stopEmergencySiren();
+
+    sirenOsc = ctx.createOscillator();
+    sirenGain = ctx.createGain();
+    sirenOsc.type = 'sawtooth';
+
+    const now = ctx.currentTime;
+    sirenGain.gain.setValueAtTime(0.25, now);
+
+    // Siren pitch modulation
+    for (let i = 0; i < 10; i++) {
+      sirenOsc.frequency.setValueAtTime(440, now + i * 0.6);
+      sirenOsc.frequency.linearRampToValueAtTime(880, now + i * 0.6 + 0.3);
+      sirenOsc.frequency.linearRampToValueAtTime(440, now + i * 0.6 + 0.6);
     }
-  } catch (err) {
-    console.warn('Audio playback error:', err);
-  }
+
+    sirenOsc.connect(sirenGain);
+    sirenGain.connect(ctx.destination);
+    sirenOsc.start();
+  } catch (e) {}
 }
 
-// Fetch Initial State via REST
-async function fetchInitialState() {
+function stopEmergencySiren() {
   try {
-    const res = await fetch('/api/state');
-    if (!res.ok) throw new Error('State fetch failed');
-    appState = await res.json();
-    renderApp();
-  } catch (err) {
-    console.error('Failed to load state:', err);
-  }
+    if (sirenOsc) {
+      sirenOsc.stop();
+      sirenOsc.disconnect();
+      sirenOsc = null;
+    }
+  } catch (e) {}
 }
 
-// Connect to Server-Sent Events (SSE) for Real-Time Synchronized Dual-Role View
-function initSSE() {
-  const liveIndicator = document.getElementById('live-indicator');
-  
-  try {
-    const evtSource = new EventSource('/api/events');
-
-    evtSource.onopen = () => {
-      if (liveIndicator) {
-        liveIndicator.className = 'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
-        liveIndicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="hidden sm:inline">Live Sync</span>';
-      }
-    };
-
-    evtSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.state) {
-          const oldStatus = appState ? appState.status.current : null;
-          appState = data.state;
-          renderApp();
-
-          // Sound triggers based on incoming events
-          if (data.type === 'EMERGENCY_ALERT' || (appState.status.current === 'alert' && oldStatus !== 'alert')) {
-            playSound('alert');
-          } else if (data.type === 'CHECKIN_SUCCESS') {
-            playSound('checkin');
-          }
-        }
-      } catch (e) {
-        console.warn('SSE message parse error:', e);
-      }
-    };
-
-    evtSource.onerror = () => {
-      if (liveIndicator) {
-        liveIndicator.className = 'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
-        liveIndicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span class="hidden sm:inline">Reconnecting</span>';
-      }
-    };
-  } catch (err) {
-    console.error('SSE initialization error:', err);
-  }
-}
-
-// ==========================================
-// 2. SPEECH SYNTHESIS & RECOGNITION (VOICE)
-// ==========================================
-
-function speakText(text) {
+// Web Speech Synthesis (Bilingual readout)
+function speakMessage(textEn, textTa) {
   if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel(); // Cancel any ongoing speech
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.95; // Slightly slower, very clear for seniors
-  utterance.pitch = 1.05;
-  
-  // Pick a pleasant natural voice if available
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Jenny')));
-  if (preferredVoice) utterance.voice = preferredVoice;
+  window.speechSynthesis.cancel();
+
+  const textToSpeak = currentLang === 'ta' ? (textTa || textEn) : (textEn || textTa);
+  const utterance = new SpeechSynthesisUtterance(textToSpeak);
+  utterance.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
+  utterance.rate = 0.95; // Slightly slower for elderly clarity
+  utterance.pitch = 1.0;
 
   window.speechSynthesis.speak(utterance);
 }
 
-function speakSeniorSummary() {
-  if (!appState) return;
-  const isCheckedIn = appState.status.current === 'ok';
-  const remainingMeds = appState.todayChecklist.medications.filter(m => !m.taken).length;
+// Global Toast Notifications
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  const bg = type === 'success' ? 'bg-emerald-600 text-white' :
+             type === 'error' ? 'bg-rose-600 text-white' :
+             type === 'warning' ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-white';
+
+  toast.className = `${bg} px-4 py-3 rounded-2xl shadow-xl border border-white/20 text-sm font-bold flex items-center space-x-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto max-w-sm`;
   
-  let msg = `Good day, Eleanor. `;
-  if (isCheckedIn) {
-    msg += `You are all checked in for today, and David knows you are doing well. `;
-  } else {
-    msg += `Your morning check-in is pending. Please tap the green button to let family know you are okay. `;
-  }
+  const icon = type === 'success' ? 'fa-circle-check' :
+               type === 'error' ? 'fa-triangle-exclamation' :
+               type === 'warning' ? 'fa-bell' : 'fa-info-circle';
 
-  if (remainingMeds > 0) {
-    msg += `You have ${remainingMeds} medication reminder${remainingMeds > 1 ? 's' : ''} remaining today. `;
-  } else {
-    msg += `All your medications for today are taken. `;
-  }
-
-  msg += `You have an appointment with Dr. Sarah Smith at 4:00 PM today. Son David will pick you up at 3:15 PM.`;
-
-  speakText(msg);
-}
-
-function initVoiceRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    console.warn('Web Speech Recognition API not natively supported on this browser.');
-    return;
-  }
-
-  speechRecognizer = new SpeechRecognition();
-  speechRecognizer.continuous = false;
-  speechRecognizer.interimResults = true;
-  speechRecognizer.lang = 'en-US';
-
-  speechRecognizer.onstart = () => {
-    const card = document.getElementById('voice-listening-card');
-    const statusText = document.getElementById('voice-status-text');
-    if (card) card.classList.remove('hidden');
-    if (statusText) statusText.textContent = 'Listening... Speak your check-in or health update:';
-  };
-
-  speechRecognizer.onresult = (event) => {
-    const transcript = Array.from(event.results)
-      .map(result => result[0])
-      .map(result => result.transcript)
-      .join('');
-
-    const transcriptEl = document.getElementById('voice-transcript-text');
-    if (transcriptEl) transcriptEl.textContent = `"${transcript}"`;
-
-    if (event.results[0].isFinal) {
-      processVoiceCommand(transcript);
-    }
-  };
-
-  speechRecognizer.onerror = (event) => {
-    console.warn('Speech recognition event:', event.error);
-    const statusText = document.getElementById('voice-status-text');
-    if (statusText) statusText.textContent = `Voice ready. Click below to simulate phrases or try again.`;
-  };
-
-  speechRecognizer.onend = () => {
-    const label = document.getElementById('voice-btn-label');
-    if (label) label.textContent = 'Voice Check-In ("Tap & Speak")';
-  };
-}
-
-function startVoiceRecognition() {
-  ensureAudioReady();
-  const card = document.getElementById('voice-listening-card');
-  if (card) card.classList.remove('hidden');
-
-  if (speechRecognizer) {
-    try {
-      speechRecognizer.start();
-      const label = document.getElementById('voice-btn-label');
-      if (label) label.textContent = 'Listening... Speak now';
-      return;
-    } catch (e) {
-      console.log('Voice recognizer already started or error:', e);
-    }
-  }
-
-  // Fallback visual display for simulated microphone
-  const statusText = document.getElementById('voice-status-text');
-  if (statusText) statusText.textContent = 'Listening mode active (Tap any phrase below to test):';
-}
-
-function stopVoiceRecognition() {
-  const card = document.getElementById('voice-listening-card');
-  if (card) card.classList.add('hidden');
-  if (speechRecognizer) {
-    try { speechRecognizer.stop(); } catch (e) {}
-  }
-}
-
-function simulateVoiceCommand(phrase) {
-  const transcriptEl = document.getElementById('voice-transcript-text');
-  if (transcriptEl) transcriptEl.textContent = `"${phrase}"`;
-  processVoiceCommand(phrase);
-}
-
-function processVoiceCommand(cmd) {
-  const lower = cmd.toLowerCase();
-
-  if (lower.includes('awake') || lower.includes('doing well') || lower.includes('good morning') || lower.includes('check in')) {
-    performSeniorCheckIn(cmd);
-    speakText("Glad to hear you are awake and doing well Eleanor! Your check in has been sent to David.");
-  } else if (lower.includes('blood pressure') || lower.includes('lisinopril') || lower.includes('morning med') || lower.includes('medicine')) {
-    const bpMed = appState.todayChecklist.medications.find(m => m.id === 'med-1');
-    if (bpMed && !bpMed.taken) {
-      toggleMedication('med-1');
-      speakText("Marked your morning blood pressure medication as taken. Great job Eleanor!");
-    } else {
-      speakText("Your morning medication was already recorded as taken.");
-    }
-  } else if (lower.includes('emergency') || lower.includes('help') || lower.includes('fall') || lower.includes('sos')) {
-    triggerEmergencySOS();
-    speakText("Emergency alert triggered. Alerting David and preparing assistance immediately.");
-  } else if (lower.includes('vital') || lower.includes('120') || lower.includes('sugar')) {
-    submitVitalsData(120, 80, 98.6, 105, 72);
-    speakText("Logged your health vitals: 120 over 80 blood pressure, normal glucose. All recorded.");
-  } else if (lower.includes('appointment') || lower.includes('doctor')) {
-    speakText("You have a 4:00 PM appointment with Dr. Sarah Smith at Metro Health Center. David will pick you up at 3:15 PM.");
-  } else {
-    speakText(`Recorded your voice note: ${cmd}. Updating your status.`);
-    performSeniorCheckIn(cmd);
-  }
+  toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+  container.appendChild(toast);
 
   setTimeout(() => {
-    stopVoiceRecognition();
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  }, 10);
+
+  setTimeout(() => {
+    toast.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
 
-// ==========================================
-// 3. MAIN UI RENDERING
-// ==========================================
+// ================= BILINGUAL TRANSLATION ENGINE =================
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('careconnect_lang', lang);
+  document.body.setAttribute('data-lang', lang);
 
-function renderApp() {
-  if (!appState) return;
+  // Update switcher button styles
+  const btnEn = document.getElementById('lang-btn-en');
+  const btnTa = document.getElementById('lang-btn-ta');
 
-  renderSeniorView();
-  renderCaregiverView();
-}
-
-// --- RENDER SENIOR MODE VIEW ---
-function renderSeniorView() {
-  const status = appState.status;
-  const isCheckedIn = status.current === 'ok' && status.lastCheckIn;
-
-  // 1. Status Banners (Delayed vs Alert)
-  const delayedBanner = document.getElementById('senior-delayed-banner');
-  const alertBanner = document.getElementById('senior-alert-banner');
-  const alertText = document.getElementById('senior-alert-text');
-
-  if (status.current === 'delayed') {
-    delayedBanner.classList.remove('hidden');
-    alertBanner.classList.add('hidden');
-  } else if (status.current === 'alert') {
-    delayedBanner.classList.add('hidden');
-    alertBanner.classList.remove('hidden');
-    if (alertText && status.alertDetails) {
-      alertText.textContent = status.alertDetails.message;
-    }
+  if (lang === 'en') {
+    btnEn.className = "px-3 py-1.5 rounded-lg text-sm font-bold transition-all bg-white text-blue-700 shadow-sm";
+    btnTa.className = "px-3 py-1.5 rounded-lg text-sm font-bold transition-all text-slate-600 hover:text-slate-900";
   } else {
-    delayedBanner.classList.add('hidden');
-    alertBanner.classList.add('hidden');
+    btnTa.className = "px-3 py-1.5 rounded-lg text-sm font-bold transition-all bg-white text-blue-700 shadow-sm";
+    btnEn.className = "px-3 py-1.5 rounded-lg text-sm font-bold transition-all text-slate-600 hover:text-slate-900";
   }
 
-  // 2. Big One-Tap Check-In Card
-  const pendingState = document.getElementById('checkin-pending-state');
-  const doneState = document.getElementById('checkin-done-state');
-  const checkinTimeDisplay = document.getElementById('checkin-timestamp-display');
-  const mainCheckinBtn = document.getElementById('senior-main-checkin-btn');
-
-  if (isCheckedIn && status.current !== 'delayed') {
-    pendingState.classList.add('hidden');
-    doneState.classList.remove('hidden');
-    if (checkinTimeDisplay) {
-      checkinTimeDisplay.textContent = status.lastCheckInDisplay || 'Checked In Today';
-    }
-  } else {
-    pendingState.classList.remove('hidden');
-    doneState.classList.add('hidden');
-
-    if (status.current === 'delayed') {
-      mainCheckinBtn.className = 'animate-pulse-amber touch-target-senior w-full max-w-xl mx-auto py-8 sm:py-10 px-8 rounded-3xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-2xl sm:text-3xl shadow-xl shadow-amber-500/30 flex items-center justify-center gap-4 transition-all border-4 border-amber-300';
-    } else {
-      mainCheckinBtn.className = 'animate-pulse-green touch-target-senior w-full max-w-xl mx-auto py-8 sm:py-10 px-8 rounded-3xl bg-gradient-to-r from-caregreen-600 to-emerald-500 hover:from-caregreen-700 hover:to-emerald-600 text-white font-black text-2xl sm:text-3xl shadow-xl shadow-caregreen-600/30 flex items-center justify-center gap-4 transition-all hover:scale-102 active:scale-95 border-4 border-emerald-300';
-    }
-  }
-
-  // 3. Medication Reminders List
-  renderSeniorMedications();
-
-  // 4. Vitals form values from current state
-  const vitals = appState.todayChecklist.vitalsLoggedToday;
-  if (vitals) {
-    if (vitals.bloodPressure) {
-      const bpSys = document.getElementById('vital-bp-sys');
-      const bpDia = document.getElementById('vital-bp-dia');
-      if (bpSys && !document.activeElement.isSameNode(bpSys)) bpSys.value = vitals.bloodPressure.systolic;
-      if (bpDia && !document.activeElement.isSameNode(bpDia)) bpDia.value = vitals.bloodPressure.diastolic;
-    }
-    if (vitals.temperature) {
-      const tempEl = document.getElementById('vital-temp');
-      if (tempEl && !document.activeElement.isSameNode(tempEl)) tempEl.value = vitals.temperature.value;
-    }
-    if (vitals.bloodSugar) {
-      const sugarEl = document.getElementById('vital-sugar');
-      if (sugarEl && !document.activeElement.isSameNode(sugarEl)) sugarEl.value = vitals.bloodSugar.value;
-    }
-    if (vitals.heartRate) {
-      const hrEl = document.getElementById('vital-hr');
-      if (hrEl && !document.activeElement.isSameNode(hrEl)) hrEl.value = vitals.heartRate.value;
-    }
-    const lastBadge = document.getElementById('vitals-last-logged-badge');
-    if (lastBadge && vitals.bloodPressure.loggedAt) {
-      lastBadge.textContent = `Last recorded today at ${vitals.bloodPressure.loggedAt}`;
-    }
+  applyTranslations();
+  if (appState) {
+    renderUI();
   }
 }
 
-function renderSeniorMedications() {
-  const container = document.getElementById('senior-medications-list');
-  const badge = document.getElementById('meds-count-badge');
-  if (!container) return;
-
-  const meds = appState.todayChecklist.medications;
-  const takenCount = meds.filter(m => m.taken).length;
-  if (badge) badge.textContent = `${takenCount} of ${meds.length} Taken`;
-
-  container.innerHTML = meds.map(med => {
-    if (med.taken) {
-      return `
-        <div class="senior-card bg-emerald-50/70 dark:bg-slate-800 p-5 sm:p-6 rounded-3xl border-2 border-emerald-300 dark:border-emerald-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
-          <div class="flex items-start sm:items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-3xl text-emerald-600 dark:text-emerald-400 border-2 border-emerald-300">
-              ✓
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white line-through opacity-80">${med.name}</h3>
-                <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-200">Taken</span>
-              </div>
-              <p class="text-base text-slate-600 dark:text-slate-300 font-semibold">
-                ${med.dosage} • ${med.purpose} • Scheduled for ${med.time}
-              </p>
-              <p class="text-xs text-emerald-700 dark:text-emerald-400 font-bold mt-1">
-                Completed at ${med.takenAt || 'Today'}
-              </p>
-            </div>
-          </div>
-          <button onclick="toggleMedication('${med.id}')" class="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:underline self-end sm:self-center px-3 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200">
-            Undo
-          </button>
-        </div>
-      `;
-    } else {
-      return `
-        <div class="senior-card bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-3xl border-2 border-sky-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-sky-400">
-          <div class="flex items-start sm:items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-slate-700 flex items-center justify-center text-3xl text-sky-600 dark:text-sky-300 border-2 border-sky-200">
-              💊
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">${med.name}</h3>
-                <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">Due at ${med.time}</span>
-              </div>
-              <p class="text-base text-slate-600 dark:text-slate-300 font-semibold">
-                ${med.dosage} • ${med.purpose}
-              </p>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Take with water after meal</p>
-            </div>
-          </div>
-          <button onclick="toggleMedication('${med.id}')" class="touch-target-senior px-6 py-3.5 rounded-2xl bg-caregreen-600 hover:bg-caregreen-700 active:scale-95 text-white font-black text-lg shadow-md shadow-caregreen-600/20 flex items-center justify-center gap-2 transition-transform">
-            <span>✓</span>
-            <span>Mark as Taken</span>
-          </button>
-        </div>
-      `;
-    }
-  }).join('');
+function t(key) {
+  if (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) {
+    return TRANSLATIONS[currentLang][key];
+  }
+  if (TRANSLATIONS['en'] && TRANSLATIONS['en'][key]) {
+    return TRANSLATIONS['en'][key];
+  }
+  return key;
 }
 
-// --- RENDER CAREGIVER DASHBOARD VIEW ---
-function renderCaregiverView() {
-  const status = appState.status;
-
-  // 1. Live Status Badge & Dot
-  const liveBadge = document.getElementById('cg-live-status-badge');
-  const statusDot = document.getElementById('cg-status-dot');
-  const lastActive = document.getElementById('cg-last-active');
-
-  if (lastActive) lastActive.textContent = appState.senior.lastActive;
-
-  if (status.current === 'ok') {
-    if (liveBadge) {
-      liveBadge.className = 'px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300';
-      liveBadge.textContent = '🟢 Everything OK';
+function applyTranslations() {
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.getAttribute('data-t');
+    const translation = t(key);
+    if (translation) {
+      el.textContent = translation;
     }
-    if (statusDot) {
-      statusDot.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] text-white font-bold';
-      statusDot.textContent = '✓';
-    }
-  } else if (status.current === 'delayed') {
-    if (liveBadge) {
-      liveBadge.className = 'px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 animate-pulse';
-      liveBadge.textContent = '🟡 Check-in Pending / Delayed';
-    }
-    if (statusDot) {
-      statusDot.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] text-white font-bold animate-ping';
-      statusDot.textContent = '!';
-    }
-  } else if (status.current === 'alert') {
-    if (liveBadge) {
-      liveBadge.className = 'px-3 py-1 rounded-full text-xs font-black bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200 border border-red-400 animate-pulse';
-      liveBadge.textContent = '🔴 Alert Triggered / SOS Active';
-    }
-    if (statusDot) {
-      statusDot.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-red-600 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] text-white font-bold animate-bounce';
-      statusDot.textContent = '🚨';
-    }
-  }
-
-  // 2. Active Alert Banner
-  const cgAlertBanner = document.getElementById('cg-alert-banner');
-  const cgAlertTitle = document.getElementById('cg-alert-title');
-  const cgAlertMsg = document.getElementById('cg-alert-msg');
-  const cgAlertSub = document.getElementById('cg-alert-sub');
-  const cgAlertIcon = document.getElementById('cg-alert-icon');
-
-  if (status.current !== 'ok') {
-    cgAlertBanner.classList.remove('hidden');
-    if (status.current === 'delayed') {
-      cgAlertBanner.className = 'p-5 rounded-2xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-100 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4';
-      if (cgAlertIcon) cgAlertIcon.textContent = '🟡';
-      if (cgAlertTitle) cgAlertTitle.textContent = 'Check-In Delayed';
-      if (cgAlertMsg) cgAlertMsg.textContent = status.message;
-      if (cgAlertSub) cgAlertSub.textContent = 'Automated reminder dispatched to Eleanor\'s tablet. Deadline: 10:00 AM.';
-    } else {
-      cgAlertBanner.className = 'p-5 rounded-2xl border-2 border-red-500 bg-red-50 dark:bg-red-950/90 text-red-900 dark:text-red-100 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse';
-      if (cgAlertIcon) cgAlertIcon.textContent = '🚨';
-      if (cgAlertTitle) cgAlertTitle.textContent = 'Emergency Caregiver Escalation Active';
-      if (cgAlertMsg) cgAlertMsg.textContent = (status.alertDetails && status.alertDetails.message) || 'Immediate follow-up required!';
-      if (cgAlertSub) cgAlertSub.textContent = `Alert dispatched to: David Vance (SMS/Phone Call), Dr. Smith.`;
-    }
-  } else {
-    cgAlertBanner.classList.add('hidden');
-  }
-
-  // 3. Metric Cards
-  const mCheckinTime = document.getElementById('cg-metric-checkin-time');
-  const mCheckinStatus = document.getElementById('cg-metric-checkin-status');
-  const mCheckinIcon = document.getElementById('cg-metric-checkin-icon');
-
-  if (status.current === 'ok') {
-    if (mCheckinTime) mCheckinTime.textContent = status.lastCheckInDisplay || '8:15 AM';
-    if (mCheckinStatus) {
-      mCheckinStatus.textContent = '✓ Confirmed on time';
-      mCheckinStatus.className = 'text-xs font-semibold text-emerald-600 dark:text-emerald-400';
-    }
-    if (mCheckinIcon) mCheckinIcon.textContent = '🟢';
-  } else if (status.current === 'delayed') {
-    if (mCheckinTime) mCheckinTime.textContent = 'Pending';
-    if (mCheckinStatus) {
-      mCheckinStatus.textContent = '⚠️ Check-in overdue';
-      mCheckinStatus.className = 'text-xs font-semibold text-amber-600 dark:text-amber-400';
-    }
-    if (mCheckinIcon) mCheckinIcon.textContent = '🟡';
-  } else {
-    if (mCheckinTime) mCheckinTime.textContent = 'Alert';
-    if (mCheckinStatus) {
-      mCheckinStatus.textContent = '🚨 Escalation active';
-      mCheckinStatus.className = 'text-xs font-semibold text-red-600 dark:text-red-400';
-    }
-    if (mCheckinIcon) mCheckinIcon.textContent = '🔴';
-  }
-
-  // Meds Metric
-  const meds = appState.todayChecklist.medications;
-  const takenCount = meds.filter(m => m.taken).length;
-  const nextMed = meds.find(m => !m.taken);
-  const mMedsProg = document.getElementById('cg-metric-meds-progress');
-  const mMedsNext = document.getElementById('cg-metric-meds-next');
-  if (mMedsProg) mMedsProg.textContent = `${takenCount} of ${meds.length} Taken`;
-  if (mMedsNext) {
-    mMedsNext.textContent = nextMed ? `Next: ${nextMed.name} @ ${nextMed.time}` : 'All meds completed today! 🎉';
-  }
-
-  // Vitals Metric
-  const vitals = appState.todayChecklist.vitalsLoggedToday;
-  if (vitals) {
-    const mBpVal = document.getElementById('cg-metric-bp-val');
-    const mBpLabel = document.getElementById('cg-metric-bp-label');
-    if (mBpVal) mBpVal.textContent = `${vitals.bloodPressure.systolic} / ${vitals.bloodPressure.diastolic}`;
-    if (mBpLabel) {
-      mBpLabel.textContent = `${vitals.bloodPressure.label} (${vitals.bloodPressure.loggedAt || 'Today'})`;
-      mBpLabel.className = vitals.bloodPressure.status === 'alert'
-        ? 'text-xs font-semibold text-red-600 dark:text-red-400'
-        : 'text-xs font-semibold text-emerald-600 dark:text-emerald-400';
-    }
-
-    const mSugarVal = document.getElementById('cg-metric-sugar-val');
-    const mSugarLabel = document.getElementById('cg-metric-sugar-label');
-    if (mSugarVal) mSugarVal.textContent = `${vitals.bloodSugar.value} mg/dL`;
-    if (mSugarLabel) {
-      mSugarLabel.textContent = `${vitals.bloodSugar.label} (${vitals.bloodSugar.loggedAt || 'Today'})`;
-      mSugarLabel.className = vitals.bloodSugar.status === 'alert'
-        ? 'text-xs font-semibold text-red-600 dark:text-red-400'
-        : 'text-xs font-semibold text-emerald-600 dark:text-emerald-400';
-    }
-  }
-
-  // 4. Activity Timeline
-  renderCaregiverTimeline();
-
-  // 5. Emergency Contacts
-  renderCaregiverContacts();
-
-  // 6. Chart update
-  renderVitalsChart();
-}
-
-function renderCaregiverTimeline() {
-  const container = document.getElementById('cg-timeline-list');
-  if (!container) return;
-
-  const events = appState.activityTimeline || [];
-  const filtered = events.filter(evt => {
-    if (timelineFilter === 'all') return true;
-    return evt.type === timelineFilter;
   });
 
-  if (filtered.length === 0) {
-    container.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-6">No matching activity logged.</p>';
-    return;
+  // Dynamic placeholders
+  const mobileInput = document.getElementById('senior-mobile-input');
+  if (mobileInput) mobileInput.placeholder = t('mobile_placeholder');
+  
+  const customNudge = document.getElementById('custom-nudge-text');
+  if (customNudge) customNudge.placeholder = t('nudge_placeholder');
+}
+
+// ================= API SERVICE & REAL-TIME SYNC =================
+const API_BASE = window.location.origin;
+
+async function fetchState() {
+  try {
+    const res = await fetch(`${API_BASE}/api/state`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const data = await res.json();
+    appState = data;
+    renderUI();
+    setSyncIndicator(true);
+  } catch (err) {
+    console.error("State fetch error:", err);
+    setSyncIndicator(false);
+  }
+}
+
+function setSyncIndicator(isOnline) {
+  const ind = document.getElementById('sync-indicator');
+  const txt = document.getElementById('sync-text');
+  if (!ind || !txt) return;
+
+  if (isOnline) {
+    ind.className = "hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium";
+    txt.textContent = currentLang === 'ta' ? "நேரலை இணைப்பு" : "Live Sync";
+  } else {
+    ind.className = "hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium";
+    txt.textContent = currentLang === 'ta' ? "இணைப்பு துண்டிக்கப்பட்டது" : "Reconnecting...";
+  }
+}
+
+// Start polling every 2.5 seconds for real-time dual portal sync
+function startRealtimeSync() {
+  fetchState();
+  setInterval(fetchState, 2500);
+}
+
+// ================= NAVIGATION & ROLE MANAGEMENT =================
+function navigateTo(role) {
+  currentRole = role;
+  localStorage.setItem('careconnect_role', role);
+
+  const viewPortalSelect = document.getElementById('view-portal-select');
+  const viewSenior = document.getElementById('view-senior');
+  const viewCaregiver = document.getElementById('view-caregiver');
+  const roleToggleContainer = document.getElementById('role-toggle-container');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  viewPortalSelect.classList.add('hidden');
+  viewSenior.classList.add('hidden');
+  viewCaregiver.classList.add('hidden');
+
+  if (role === 'portal_select') {
+    viewPortalSelect.classList.remove('hidden');
+    roleToggleContainer.classList.add('hidden');
+    logoutBtn.classList.add('hidden');
+  } else if (role === 'senior') {
+    viewSenior.classList.remove('hidden');
+    roleToggleContainer.classList.remove('hidden');
+    logoutBtn.classList.remove('hidden');
+    updateRoleToggleButtons('senior');
+  } else if (role === 'caregiver') {
+    viewCaregiver.classList.remove('hidden');
+    roleToggleContainer.classList.remove('hidden');
+    logoutBtn.classList.remove('hidden');
+    updateRoleToggleButtons('caregiver');
+    setTimeout(renderChart, 100);
   }
 
-  container.innerHTML = filtered.map(evt => {
-    let icon = '⏱️';
-    let badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
-    
-    if (evt.type === 'checkin') {
-      icon = '🟢';
-      badgeColor = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
-    } else if (evt.type === 'medication') {
-      icon = '💊';
-      badgeColor = 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300';
-    } else if (evt.type === 'vitals') {
-      icon = '❤️';
-      badgeColor = 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
-    } else if (evt.type === 'alert') {
-      icon = '🚨';
-      badgeColor = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
-    } else if (evt.type === 'note') {
-      icon = '📝';
-      badgeColor = 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300';
+  if (appState) {
+    renderUI();
+  }
+}
+
+function updateRoleToggleButtons(activeRole) {
+  const btnSenior = document.getElementById('toggle-senior-btn');
+  const btnCaregiver = document.getElementById('toggle-caregiver-btn');
+  if (!btnSenior || !btnCaregiver) return;
+
+  if (activeRole === 'senior') {
+    btnSenior.className = "px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center space-x-1.5 transition-all text-blue-900 bg-white shadow-sm";
+    btnCaregiver.className = "px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center space-x-1.5 transition-all text-slate-600 hover:text-blue-900";
+  } else {
+    btnCaregiver.className = "px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center space-x-1.5 transition-all text-blue-900 bg-white shadow-sm";
+    btnSenior.className = "px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold flex items-center space-x-1.5 transition-all text-slate-600 hover:text-blue-900";
+  }
+}
+
+function switchRole(role) {
+  navigateTo(role);
+}
+
+function flipPortalView() {
+  if (currentRole === 'senior') {
+    navigateTo('caregiver');
+    showToast(currentLang === 'ta' ? "பராமரிப்பாளர் தளத்திற்கு மாற்றப்பட்டது" : "Flipped to Caregiver Dashboard", 'info');
+  } else {
+    navigateTo('senior');
+    showToast(currentLang === 'ta' ? "முதியோர் தளத்திற்கு மாற்றப்பட்டது" : "Flipped to Senior Portal", 'info');
+  }
+}
+
+function logout() {
+  navigateTo('portal_select');
+  showToast(currentLang === 'ta' ? "வெளியேறியது" : "Logged out to portal selection", 'info');
+}
+
+// Authentication Handlers
+function handleSeniorLogin(e) {
+  e.preventDefault();
+  const mobile = document.getElementById('senior-mobile-input').value;
+  const pin = document.getElementById('senior-pin-input').value;
+  if (!pin || pin.length < 4) {
+    showToast(currentLang === 'ta' ? "4-இலக்க PIN தேவை" : "Please enter a 4-digit PIN", 'error');
+    return;
+  }
+  navigateTo('senior');
+  showToast(currentLang === 'ta' ? "முதியோர் தளத்தில் வரவேற்கிறோம்!" : "Welcome to Senior Portal!", 'success');
+  playPositiveChime();
+}
+
+function handleCaregiverLogin(e) {
+  e.preventDefault();
+  navigateTo('caregiver');
+  showToast(currentLang === 'ta' ? "பராமரிப்பாளர் தளம் திறக்கப்பட்டது" : "Access granted to Caregiver Dashboard", 'success');
+}
+
+function quickDemoLogin(role) {
+  navigateTo(role);
+  playPositiveChime();
+  showToast(currentLang === 'ta' ? `${role === 'senior' ? 'முதியோர்' : 'பராமரிப்பாளர்'} மாதிரி உள்நுழைவு வெற்றிகரமானது` : `1-Click ${role} demo login successful!`, 'success');
+}
+
+// ================= SENIOR PORTAL ACTIONS =================
+
+// 1. Big One-Tap Check-In
+async function triggerSeniorCheckin(method = 'One-Tap Button') {
+  playPositiveChime();
+  try {
+    const methodTa = method === 'Voice Check-In' ? 'குரல் வழி சரிபார்ப்பு' : 'ஒரே-தொடுதல் பொத்தான்';
+    const res = await fetch(`${API_BASE}/api/checkin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method, method_ta: methodTa })
+    });
+    if (!res.ok) throw new Error("Checkin failed");
+    appState = await res.json();
+    renderUI();
+
+    showToast(t('checkin_success_title'), 'success');
+    speakMessage(
+      "Good morning Thiru Ramanathan! Morning check-in recorded. Have a wonderful day.",
+      "காலை வணக்கம் திரு ராமநாதன்! உங்கள் காலை நலம் சரிபார்ப்பு உறுதிசெய்யப்பட்டது. நலமாக இருங்கள்."
+    );
+  } catch (err) {
+    console.error("Checkin error:", err);
+    showToast("Network error during check-in", 'error');
+  }
+}
+
+// 2. Medication Toggle
+async function toggleMedication(medId) {
+  playPositiveChime();
+  try {
+    const res = await fetch(`${API_BASE}/api/medication/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: medId })
+    });
+    if (!res.ok) throw new Error("Toggle med failed");
+    appState = await res.json();
+    renderUI();
+
+    const targetMed = appState.medications.find(m => m.id === medId);
+    if (targetMed && targetMed.taken) {
+      showToast(currentLang === 'ta' ? `${targetMed.name_ta} சாப்பிடப்பட்டது எனப் பதிவானது` : `${targetMed.name} marked as taken`, 'success');
     }
+  } catch (err) {
+    console.error("Med toggle error:", err);
+  }
+}
+
+// 3. Health Readings Entry
+async function submitSeniorVitals() {
+  playPositiveChime();
+  const sys = parseInt(document.getElementById('vital-sys-input').value) || 120;
+  const dia = parseInt(document.getElementById('vital-dia-input').value) || 80;
+  const sugar = parseInt(document.getElementById('vital-sugar-input').value) || 110;
+  const temp = parseFloat(document.getElementById('vital-temp-input').value) || 98.4;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/vitals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systolic: sys, diastolic: dia, blood_sugar: sugar, temperature: temp })
+    });
+    if (!res.ok) throw new Error("Vitals submit failed");
+    appState = await res.json();
+    renderUI();
+
+    showToast(t('readings_saved_toast'), 'success');
+    speakMessage(
+      `Health readings recorded. Blood pressure is ${sys} over ${dia}, blood sugar is ${sugar}.`,
+      `உடல் நலக் குறியீடுகள் சேமிக்கப்பட்டன. ரத்த அழுத்தம் ${sys} கீழ் ${dia}, சர்க்கரை ${sugar}.`
+    );
+  } catch (err) {
+    console.error("Submit vitals error:", err);
+  }
+}
+
+// 4. Voice Check-In Assistant
+let speechRecognition = null;
+function openVoiceCheckinModal() {
+  getAudioContext();
+  const modal = document.getElementById('modal-voice');
+  modal.classList.remove('hidden');
+  const recognizedEl = document.getElementById('voice-recognized-text');
+  recognizedEl.textContent = t('voice_prompt_listen');
+
+  const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognitionClass) {
+    try {
+      speechRecognition = new SpeechRecognitionClass();
+      speechRecognition.lang = currentLang === 'ta' ? 'ta-IN' : 'en-US';
+      speechRecognition.continuous = false;
+      speechRecognition.interimResults = false;
+
+      speechRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        recognizedEl.textContent = `"${transcript}"`;
+        handleVoiceTranscript(transcript);
+      };
+
+      speechRecognition.onerror = (e) => {
+        console.warn("Speech error:", e);
+      };
+
+      speechRecognition.start();
+    } catch (e) {
+      console.warn("Speech recognition start failed:", e);
+    }
+  }
+}
+
+function closeVoiceCheckinModal() {
+  const modal = document.getElementById('modal-voice');
+  modal.classList.add('hidden');
+  if (speechRecognition) {
+    try { speechRecognition.stop(); } catch (e) {}
+  }
+}
+
+function simulateVoiceCommand(cmdType) {
+  const recognizedEl = document.getElementById('voice-recognized-text');
+  if (cmdType === 'awake') {
+    recognizedEl.textContent = currentLang === 'ta' ? '"நான் விழித்துக்கொண்டேன், நலமாக உள்ளேன்!"' : '"I am awake and doing well!"';
+    setTimeout(() => {
+      closeVoiceCheckinModal();
+      triggerSeniorCheckin('Voice Check-In');
+    }, 600);
+  } else if (cmdType === 'meds') {
+    recognizedEl.textContent = currentLang === 'ta' ? '"நான் காலை மாத்திரை சாப்பிட்டேன்"' : '"I took my morning pills"';
+    setTimeout(() => {
+      closeVoiceCheckinModal();
+      if (appState && appState.medications && appState.medications[0]) {
+        toggleMedication(appState.medications[0].id);
+      }
+    }, 600);
+  } else if (cmdType === 'bp') {
+    recognizedEl.textContent = currentLang === 'ta' ? '"என் ரத்த அழுத்தம் 120 கீழ் 80"' : '"My blood pressure is 120 over 80"';
+    setTimeout(() => {
+      closeVoiceCheckinModal();
+      document.getElementById('vital-sys-input').value = 120;
+      document.getElementById('vital-dia-input').value = 80;
+      submitSeniorVitals();
+    }, 600);
+  }
+}
+
+function handleVoiceTranscript(transcript) {
+  const lower = transcript.toLowerCase();
+  if (lower.includes('awake') || lower.includes('well') || lower.includes('நலம்') || lower.includes('விழித்து')) {
+    simulateVoiceCommand('awake');
+  } else if (lower.includes('pill') || lower.includes('medicine') || lower.includes('மாத்திரை') || lower.includes('மருந்து')) {
+    simulateVoiceCommand('meds');
+  } else {
+    showToast(`Voice received: "${transcript}"`, 'info');
+  }
+}
+
+// 5. Emergency Panic Button & Modal
+function openPanicModal() {
+  getAudioContext();
+  const modal = document.getElementById('modal-panic');
+  modal.classList.remove('hidden');
+  panicSecondsLeft = 5;
+  document.getElementById('panic-countdown').textContent = panicSecondsLeft;
+
+  playEmergencySiren();
+
+  if (panicCountdownTimer) clearInterval(panicCountdownTimer);
+  panicCountdownTimer = setInterval(() => {
+    panicSecondsLeft--;
+    document.getElementById('panic-countdown').textContent = panicSecondsLeft;
+
+    if (panicSecondsLeft <= 0) {
+      clearInterval(panicCountdownTimer);
+      confirmEmergencyPanic();
+    }
+  }, 1000);
+}
+
+function cancelPanicCountdown() {
+  if (panicCountdownTimer) clearInterval(panicCountdownTimer);
+  stopEmergencySiren();
+  document.getElementById('modal-panic').classList.add('hidden');
+  showToast(currentLang === 'ta' ? "அவசர எச்சரிக்கை ரத்து செய்யப்பட்டது" : "SOS alert cancelled", 'info');
+}
+
+async function confirmEmergencyPanic() {
+  document.getElementById('modal-panic').classList.add('hidden');
+  stopEmergencySiren();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/emergency`, { method: 'POST' });
+    if (!res.ok) throw new Error("Emergency API error");
+    appState = await res.json();
+    renderUI();
+
+    showToast("EMERGENCY ALERT BROADCASTED TO CAREGIVER & SERVICES!", 'error');
+    speakMessage(
+      "Emergency alert dispatched to Dr. Priya and 108 emergency response.",
+      "அவசர உதவி எச்சரிக்கை டாக்டர் பிரியா மற்றும் 108 அவசர ஊர்திக்கு அனுப்பப்பட்டுள்ளது."
+    );
+  } catch (e) {
+    console.error("Emergency panic error:", e);
+  }
+}
+
+async function resolveEmergencyAlert() {
+  try {
+    const res = await fetch(`${API_BASE}/api/emergency/cancel`, { method: 'POST' });
+    if (!res.ok) throw new Error("Cancel alert failed");
+    appState = await res.json();
+    renderUI();
+    showToast(currentLang === 'ta' ? "அவசர எச்சரிக்கை இயல்பு நிலைக்கு மாற்றப்பட்டது" : "Emergency alert stood down", 'success');
+  } catch (e) {
+    console.error("Resolve error:", e);
+  }
+}
+
+function playVoiceReminder() {
+  if (!appState || !appState.appointment) return;
+  const appt = appState.appointment;
+  speakMessage(
+    `Reminder: You have an upcoming doctor appointment with ${appt.doctor} on ${appt.date} at ${appt.time}.`,
+    `நினைவூட்டல்: உங்களுக்கு ${appt.doctor_ta} மருத்துவருடன் ${appt.date_ta} ${appt.time_ta} மணிக்கு மருத்துவப் பரிசோதனை உள்ளது.`
+  );
+  showToast(t('reminder_active'), 'info');
+}
+
+// 6. Senior Nudge Dismiss
+async function dismissSeniorNudge() {
+  playPositiveChime();
+  document.getElementById('senior-nudge-banner').classList.add('hidden');
+  try {
+    await fetch(`${API_BASE}/api/nudge/dismiss`, { method: 'POST' });
+    if (appState) appState.nudges = [];
+  } catch (e) {}
+}
+
+// ================= CAREGIVER ACTIONS =================
+function openNudgeModal() {
+  document.getElementById('modal-nudge').classList.remove('hidden');
+}
+
+function closeNudgeModal() {
+  document.getElementById('modal-nudge').classList.add('hidden');
+}
+
+function setNudgePreset(presetNum) {
+  const textarea = document.getElementById('custom-nudge-text');
+  if (presetNum === 1) {
+    textarea.value = currentLang === 'ta' ? "அப்பா, மதிய உணவு மற்றும் மாத்திரை சாப்பிட்டீர்களா?" : "Appa, did you have your lunch and medicines?";
+  } else if (presetNum === 2) {
+    textarea.value = currentLang === 'ta' ? "செவ்வாய்க்கிழமை மருத்துவப் பரிசோதனை உள்ளது, நினைவில் வையுங்கள்!" : "Don't forget your doctor check-up on Tuesday!";
+  } else if (presetNum === 3) {
+    textarea.value = currentLang === 'ta' ? "10 நிமிடத்தில் உங்களை அழைக்கிறேன்!" : "Calling you in 10 minutes to chat!";
+  }
+}
+
+async function sendCaregiverNudge() {
+  const text = document.getElementById('custom-nudge-text').value.trim() || "Dr. Priya sent a gentle check-in reminder.";
+  closeNudgeModal();
+  playPositiveChime();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/nudge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_en: text, message_ta: text })
+    });
+    if (!res.ok) throw new Error("Nudge failed");
+    appState = await res.json();
+    renderUI();
+    showToast(currentLang === 'ta' ? "முதியவர் திரைக்கு நினைவூட்டல் அனுப்பப்பட்டது!" : "Gentle reminder delivered to Senior portal!", 'success');
+  } catch (e) {
+    console.error("Nudge error:", e);
+  }
+}
+
+function openCallModal() {
+  getAudioContext();
+  playPositiveChime();
+  document.getElementById('modal-call').classList.remove('hidden');
+}
+
+function closeCallModal() {
+  document.getElementById('modal-call').classList.add('hidden');
+}
+
+function filterTimeline(filter) {
+  timelineFilter = filter;
+  document.querySelectorAll('.timeline-filter-btn').forEach(btn => {
+    if (btn.getAttribute('data-filter') === filter) {
+      btn.className = "timeline-filter-btn px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-xs";
+    } else {
+      btn.className = "timeline-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs";
+    }
+  });
+  renderTimelineFeed();
+}
+
+function setChartType(type) {
+  activeChartType = type;
+  const btnBp = document.getElementById('chart-tab-bp');
+  const btnSugar = document.getElementById('chart-tab-sugar');
+
+  if (type === 'bp') {
+    btnBp.className = "px-3.5 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-blue-700 shadow-sm";
+    btnSugar.className = "px-3.5 py-1.5 rounded-lg text-xs font-black transition-all text-slate-600 hover:text-slate-900";
+  } else {
+    btnSugar.className = "px-3.5 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-blue-700 shadow-sm";
+    btnBp.className = "px-3.5 py-1.5 rounded-lg text-xs font-black transition-all text-slate-600 hover:text-slate-900";
+  }
+  renderChart();
+}
+
+// ================= HACKATHON DEMO SIMULATOR =================
+let simulatorCollapsed = false;
+function toggleSimulatorCollapse() {
+  simulatorCollapsed = !simulatorCollapsed;
+  const actionsRow = document.getElementById('sim-actions-row');
+  const chevron = document.getElementById('sim-chevron');
+
+  if (simulatorCollapsed) {
+    actionsRow.classList.add('hidden');
+    chevron.className = "fa-solid fa-chevron-up";
+  } else {
+    actionsRow.classList.remove('hidden');
+    chevron.className = "fa-solid fa-chevron-down";
+  }
+}
+
+async function runSimulation(action) {
+  getAudioContext();
+  try {
+    const res = await fetch(`${API_BASE}/api/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    if (!res.ok) throw new Error("Simulation failed");
+    appState = await res.json();
+    renderUI();
+
+    if (action === 'missed_checkin') {
+      showToast(currentLang === 'ta' ? "மாதிரி: காலை சரிபார்ப்பு தாமதமாகியுள்ளது (🟡)" : "Simulated: Morning Check-in Delayed (🟡)", 'warning');
+      playPositiveChime();
+    } else if (action === 'escalation') {
+      showToast(currentLang === 'ta' ? "மாதிரி: பராமரிப்பாளர் அவசரநிலை & SMS அனுப்பப்பட்டது (🔴)" : "Simulated: Caregiver Escalation Dispatched (🔴)", 'error');
+      playEmergencySiren();
+      setTimeout(stopEmergencySiren, 1800);
+    } else if (action === 'senior_checkin') {
+      showToast(currentLang === 'ta' ? "மாதிரி: முதியவர் நலம் சரிபார்த்தார் (🟢)" : "Simulated: Senior Check-in Confirmed (🟢)", 'success');
+      playPositiveChime();
+    } else if (action === 'reset') {
+      showToast(currentLang === 'ta' ? "மாதிரி நிலை மீட்டமைக்கப்பட்டது" : "Demo state reset to clean morning scenario", 'info');
+      playPositiveChime();
+    }
+  } catch (e) {
+    console.error("Simulator error:", e);
+  }
+}
+
+// ================= RENDER UI (REACTIVE) =================
+function renderUI() {
+  if (!appState) return;
+
+  const senior = appState.senior;
+  const caregiver = appState.caregiver;
+  const status = appState.status;
+  const checkin = appState.checkin;
+  const vitals = appState.vitals;
+  const meds = appState.medications || [];
+
+  // 1. Global Emergency Banner
+  const emergBanner = document.getElementById('global-emergency-banner');
+  const emergDesc = document.getElementById('global-emergency-desc');
+  if (status.current === 'alert_triggered' || appState.active_alert) {
+    emergBanner.classList.remove('hidden');
+    const alertMsg = appState.active_alert ? 
+      (currentLang === 'ta' ? appState.active_alert.message_ta : appState.active_alert.message_en) :
+      (currentLang === 'ta' ? "அவசர உதவி எச்சரிக்கை இயக்கப்பட்டுள்ளது!" : "Emergency SOS Alert Active!");
+    emergDesc.textContent = alertMsg;
+  } else {
+    emergBanner.classList.add('hidden');
+  }
+
+  // 2. Senior Nudge Banner
+  const nudgeBanner = document.getElementById('senior-nudge-banner');
+  const nudgeMsg = document.getElementById('senior-nudge-msg');
+  if (currentRole === 'senior' && appState.nudges && appState.nudges.length > 0) {
+    const latestNudge = appState.nudges[0];
+    nudgeBanner.classList.remove('hidden');
+    nudgeMsg.textContent = `"${currentLang === 'ta' ? (latestNudge.message_ta || latestNudge.message_en) : latestNudge.message_en}"`;
+  } else {
+    nudgeBanner.classList.add('hidden');
+  }
+
+  // 3. Senior Portal Components
+  // Greeting name & info
+  const seniorGreeting = document.getElementById('senior-greeting-title');
+  const seniorBadgeName = document.getElementById('senior-badge-name');
+  const seniorBatteryVal = document.getElementById('senior-battery-val');
+  if (seniorGreeting) {
+    seniorGreeting.textContent = currentLang === 'ta' ? `காலை வணக்கம், ${senior.name_ta}!` : `Good Morning, ${senior.name}!`;
+  }
+  if (seniorBadgeName) {
+    seniorBadgeName.textContent = currentLang === 'ta' ? senior.name_ta : senior.name;
+  }
+  if (seniorBatteryVal) {
+    seniorBatteryVal.textContent = `${senior.battery}% Battery`;
+  }
+
+  // Big One-Tap Check-In Button state
+  const checkinBtn = document.getElementById('senior-checkin-btn');
+  const checkinLabel = document.getElementById('checkin-btn-label');
+  const checkinIcon = document.getElementById('checkin-btn-icon');
+  const checkinPulse = document.getElementById('checkin-pulse-ring');
+  const checkinBox = document.getElementById('checkin-status-box');
+  const checkinStatusText = document.getElementById('checkin-status-text');
+
+  if (checkin.completed) {
+    checkinLabel.textContent = currentLang === 'ta' ? "நலம் உறுதிசெய்யப்பட்டது!" : "I'm Awake & Doing Well!";
+    checkinIcon.className = "fa-solid fa-circle-check text-5xl text-emerald-200";
+    checkinBtn.className = "relative w-72 h-72 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-700 text-white shadow-2xl shadow-emerald-700/50 hover:scale-102 active:scale-95 transition-all flex flex-col items-center justify-center p-6 border-8 border-emerald-300";
+    checkinPulse.classList.add('hidden');
+    checkinBox.classList.remove('hidden');
+    checkinStatusText.textContent = `${t('checkin_completed_at')} ${checkin.time}`;
+  } else {
+    checkinLabel.textContent = t('checkin_btn_text');
+    checkinIcon.className = "fa-solid fa-sun text-5xl text-amber-300";
+    checkinBtn.className = "relative w-72 h-72 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-2xl shadow-emerald-600/50 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center p-6 border-8 border-white group";
+    checkinPulse.classList.remove('hidden');
+    checkinBox.classList.add('hidden');
+  }
+
+  // Senior Medications Checklist
+  renderSeniorMedications();
+
+  // Senior Doctor Appointment
+  const appt = appState.appointment;
+  if (appt) {
+    const docEl = document.getElementById('senior-appt-doctor');
+    const clinicEl = document.getElementById('senior-appt-clinic');
+    const dateEl = document.getElementById('senior-appt-date');
+    const notesEl = document.getElementById('senior-appt-notes');
+    if (docEl) docEl.textContent = currentLang === 'ta' ? appt.doctor_ta : appt.doctor;
+    if (clinicEl) clinicEl.textContent = currentLang === 'ta' ? appt.clinic_ta : appt.clinic;
+    if (dateEl) dateEl.textContent = `${currentLang === 'ta' ? appt.date_ta : appt.date} • ${currentLang === 'ta' ? appt.time_ta : appt.time}`;
+    if (notesEl) notesEl.textContent = currentLang === 'ta' ? appt.notes_ta : appt.notes;
+  }
+
+  // 4. Caregiver Dashboard Components
+  // Header profile
+  const cgName = document.getElementById('cg-senior-name');
+  const cgLoc = document.getElementById('cg-senior-loc');
+  const cgBat = document.getElementById('cg-senior-battery');
+  if (cgName) cgName.textContent = currentLang === 'ta' ? senior.name_ta : senior.name;
+  if (cgLoc) cgLoc.textContent = currentLang === 'ta' ? senior.location_ta : senior.location;
+  if (cgBat) cgBat.textContent = `${senior.battery}%`;
+
+  // Status Badge (🟢, 🟡, 🔴)
+  renderCaregiverStatusBadge();
+
+  // Summary Cards
+  const checkinVal = document.getElementById('cg-checkin-val');
+  const checkinSub = document.getElementById('cg-checkin-sub');
+  if (checkinVal) checkinVal.textContent = checkin.completed ? checkin.time : (currentLang === 'ta' ? "தாமதம்" : "Delayed");
+  if (checkinSub) {
+    if (checkin.completed) {
+      checkinSub.className = "flex items-center space-x-1.5 mt-2 text-xs font-bold text-emerald-600";
+      checkinSub.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${t('summary_checkin_ontime')}</span>`;
+    } else {
+      checkinSub.className = "flex items-center space-x-1.5 mt-2 text-xs font-bold text-amber-600";
+      checkinSub.innerHTML = `<i class="fa-solid fa-clock"></i> <span>${t('summary_checkin_delayed')}</span>`;
+    }
+  }
+
+  // Meds adherence
+  const takenCount = meds.filter(m => m.taken).length;
+  const totalCount = meds.length;
+  const percent = totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0;
+  
+  const medsPercent = document.getElementById('cg-meds-percent');
+  const medsRatio = document.getElementById('cg-meds-ratio');
+  const medsBar = document.getElementById('cg-meds-bar');
+  if (medsPercent) medsPercent.textContent = `${percent}%`;
+  if (medsRatio) medsRatio.textContent = currentLang === 'ta' ? `${takenCount} / ${totalCount} மாத்திரைகள்` : `${takenCount} of ${totalCount} Pills`;
+  if (medsBar) medsBar.style.width = `${percent}%`;
+
+  // Latest Vitals
+  const latestVitals = vitals.latest;
+  const bpVal = document.getElementById('cg-bp-val');
+  const bpStatus = document.getElementById('cg-bp-status');
+  if (bpVal) bpVal.textContent = `${latestVitals.systolic} / ${latestVitals.diastolic}`;
+  if (bpStatus) {
+    const isNormal = (latestVitals.systolic <= 130 && latestVitals.diastolic <= 85);
+    bpStatus.className = `flex items-center space-x-1.5 mt-2 text-xs font-bold ${isNormal ? 'text-emerald-600' : 'text-amber-600'}`;
+    bpStatus.innerHTML = `<i class="fa-solid ${isNormal ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i> <span>${isNormal ? t('summary_bp_status_normal') : t('summary_bp_status_high')}</span>`;
+  }
+
+  const sugarVal = document.getElementById('cg-sugar-val');
+  const tempVal = document.getElementById('cg-temp-val');
+  if (sugarVal) sugarVal.textContent = latestVitals.blood_sugar;
+  if (tempVal) tempVal.textContent = latestVitals.temperature;
+
+  // Render Activity Feed
+  renderTimelineFeed();
+
+  // Render Simulated SMS
+  renderSimulatedSms();
+
+  // Render Chart if caregiver view is active
+  if (currentRole === 'caregiver') {
+    renderChart();
+  }
+}
+
+// Render Status Badge with correct color and text
+function renderCaregiverStatusBadge() {
+  const badge = document.getElementById('cg-status-badge');
+  const text = document.getElementById('cg-status-text');
+  if (!badge || !text) return;
+
+  const current = appState.status.current;
+  if (current === 'routine_normal') {
+    badge.className = "inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300";
+    text.innerHTML = `<span class="h-2.5 w-2.5 rounded-full bg-emerald-500 status-glow-green inline-block mr-1"></span> ${t('status_routine_normal')}`;
+  } else if (current === 'checkin_delayed') {
+    badge.className = "inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300";
+    text.innerHTML = `<span class="h-2.5 w-2.5 rounded-full bg-amber-500 status-glow-amber inline-block mr-1"></span> ${t('status_checkin_delayed')}`;
+  } else if (current === 'alert_triggered') {
+    badge.className = "inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 animate-pulse";
+    text.innerHTML = `<span class="h-2.5 w-2.5 rounded-full bg-rose-600 status-glow-red inline-block mr-1"></span> ${t('status_alert_triggered')}`;
+  }
+}
+
+// Render Senior Medications (Oversized vertical checklist)
+function renderSeniorMedications() {
+  const container = document.getElementById('senior-meds-list');
+  const counter = document.getElementById('senior-meds-counter');
+  if (!container || !appState) return;
+
+  const meds = appState.medications || [];
+  const taken = meds.filter(m => m.taken).length;
+  if (counter) counter.textContent = `${taken} / ${meds.length} ${t('med_taken')}`;
+
+  container.innerHTML = meds.map(med => {
+    const isTaken = med.taken;
+    const name = currentLang === 'ta' ? med.name_ta : med.name;
+    const time = currentLang === 'ta' ? med.time_ta : med.time;
+    const timingBadgeColor = med.timing === 'morning' ? 'bg-amber-100 text-amber-800' :
+                             med.timing === 'afternoon' ? 'bg-orange-100 text-orange-800' : 'bg-indigo-100 text-indigo-800';
 
     return `
-      <div class="p-3 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-750 text-xs space-y-1 hover:bg-slate-100/70 transition-colors">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-            <span>${icon}</span>
-            <span>${evt.title}</span>
+      <div class="p-5 rounded-2xl border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isTaken ? 'bg-emerald-50/70 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}">
+        <div class="flex items-start space-x-4">
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0 ${isTaken ? 'bg-emerald-500 text-white' : 'bg-blue-100 text-blue-600'}">
+            ${isTaken ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-pills"></i>'}
           </div>
-          <span class="text-[11px] font-semibold text-slate-500 font-mono">${evt.timestamp}</span>
+          <div>
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-xs font-black px-2.5 py-0.5 rounded-full ${timingBadgeColor}">
+                ${time}
+              </span>
+              <span class="text-xs font-bold text-slate-500">${med.dose}</span>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 leading-snug">${name}</h3>
+            ${isTaken ? `<p class="text-xs font-bold text-emerald-700 mt-1"><i class="fa-solid fa-clock mr-1"></i>${t('med_taken')}: ${med.taken_at || 'Today'}</p>` : ''}
+          </div>
         </div>
-        <p class="text-slate-600 dark:text-slate-300 font-normal leading-relaxed">${evt.description}</p>
-        <div class="flex items-center justify-between pt-1">
-          <span class="text-[10px] text-slate-500">By: ${evt.actor}</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${evt.type.toUpperCase()}</span>
+
+        <div>
+          ${isTaken ? `
+            <button onclick="toggleMedication(${med.id})" class="w-full sm:w-auto bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 flex items-center justify-center space-x-2 text-base transition">
+              <i class="fa-solid fa-rotate-left"></i>
+              <span>${t('med_undo')}</span>
+            </button>
+          ` : `
+            <button onclick="toggleMedication(${med.id})" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black px-6 py-3.5 rounded-xl shadow-md shadow-blue-600/30 flex items-center justify-center space-x-2 text-lg transition">
+              <i class="fa-solid fa-check"></i>
+              <span>${t('med_mark_taken')}</span>
+            </button>
+          `}
         </div>
       </div>
     `;
   }).join('');
 }
 
-function renderCaregiverContacts() {
-  const container = document.getElementById('cg-contacts-list');
-  if (!container) return;
+// Render Timeline Feed with filter support
+function renderTimelineFeed() {
+  const container = document.getElementById('caregiver-timeline-feed');
+  if (!container || !appState) return;
 
-  const contacts = appState.emergencyContacts || [];
-  container.innerHTML = contacts.map(c => `
-    <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-750 flex items-center justify-between gap-3 shadow-2xs hover:border-slate-300 transition-colors">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl ${c.primary ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-sky-100 text-sky-700 dark:bg-slate-700 dark:text-sky-300'} flex items-center justify-center font-black text-sm">
-          ${c.primary ? '🚨' : '👤'}
+  let events = appState.timeline || [];
+  if (timelineFilter !== 'all') {
+    if (timelineFilter === 'medication') {
+      events = events.filter(e => e.type === 'medication');
+    } else if (timelineFilter === 'vitals') {
+      events = events.filter(e => e.type === 'vitals');
+    } else if (timelineFilter === 'alerts') {
+      events = events.filter(e => e.type === 'emergency' || e.type === 'warning' || e.type === 'escalation' || e.type === 'nudge');
+    }
+  }
+
+  if (events.length === 0) {
+    container.innerHTML = `<div class="p-4 text-center text-slate-400 text-sm font-semibold">${t('no_events')}</div>`;
+    return;
+  }
+
+  container.innerHTML = events.map(item => {
+    const title = currentLang === 'ta' ? (item.title_ta || item.title_en) : item.title_en;
+    const desc = currentLang === 'ta' ? (item.desc_ta || item.desc_en) : item.desc_en;
+    
+    const colorClasses = item.badge_color === 'red' ? 'bg-red-100 text-red-700 border-red-200' :
+                         item.badge_color === 'amber' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                         item.badge_color === 'blue' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                         item.badge_color === 'purple' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                         'bg-emerald-100 text-emerald-700 border-emerald-200';
+
+    return `
+      <div class="p-3.5 rounded-2xl border bg-slate-50 hover:bg-white transition-all space-y-1">
+        <div class="flex items-center justify-between text-xs font-bold">
+          <span class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md ${colorClasses}">
+            <i class="fa-solid ${item.icon || 'fa-circle-info'}"></i>
+            <span>${title}</span>
+          </span>
+          <span class="text-slate-400 font-mono">${item.time_str || 'Today'}</span>
         </div>
-        <div>
-          <div class="flex items-center gap-1.5">
-            <span class="font-extrabold text-xs text-slate-900 dark:text-white">${c.name}</span>
-            <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${c.badge || c.role}</span>
-          </div>
-          <p class="text-[11px] text-slate-500 font-mono">${c.phone}</p>
-        </div>
+        <p class="text-xs text-slate-700 font-medium pl-1">${desc}</p>
       </div>
-      <div class="flex items-center gap-1.5">
-        <button onclick="simulateCall('${c.name}', '${c.phone}', '${c.role}')" title="Simulate Call" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs">
-          📞
-        </button>
-        <button onclick="openSmsModal('${c.name}', '${c.phone}')" title="Send SMS" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs">
-          💬
-        </button>
+    `;
+  }).join('');
+}
+
+// Render Simulated SMS
+function renderSimulatedSms() {
+  const container = document.getElementById('simulated-sms-list');
+  if (!container || !appState) return;
+
+  const smsList = appState.simulated_sms || [];
+  if (smsList.length === 0) {
+    container.innerHTML = `<p class="text-xs text-slate-400 italic">No automated emergency SMS dispatched currently. (Trigger via Simulator or Panic Button)</p>`;
+    return;
+  }
+
+  container.innerHTML = smsList.map(sms => `
+    <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-xl space-y-1">
+      <div class="flex items-center justify-between text-xs text-slate-400 font-mono">
+        <span>To: <strong class="text-slate-200">${sms.recipient}</strong></span>
+        <span>${sms.time_str}</span>
       </div>
+      <p class="text-xs text-emerald-300 font-mono">${sms.text}</p>
     </div>
   `).join('');
 }
 
-// --- RENDER VITALS CHART (CHART.JS) ---
-function renderVitalsChart() {
+// ================= CHART.JS DATA VISUALIZATION =================
+function renderChart() {
   const canvas = document.getElementById('vitalsChart');
-  if (!canvas || !appState || !window.Chart) return;
+  if (!canvas || !appState || !appState.vitals) return;
 
-  const history = appState.vitalsHistory || [];
-  const labels = history.map(h => h.date);
+  const history = appState.vitals.history_7_days || [];
+  const labels = history.map(h => currentLang === 'ta' ? (h.date_ta || h.date) : h.date);
 
-  let datasets = [];
-
-  if (currentChartTab === 'bp') {
-    datasets = [
-      {
-        label: 'Systolic BP (mmHg)',
-        data: history.map(h => h.sys),
-        borderColor: '#0284c7',
-        backgroundColor: 'rgba(2, 132, 199, 0.1)',
-        tension: 0.35,
-        fill: true,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3
-      },
-      {
-        label: 'Diastolic BP (mmHg)',
-        data: history.map(h => h.dia),
-        borderColor: '#0d9488',
-        backgroundColor: 'rgba(13, 148, 136, 0.05)',
-        tension: 0.35,
-        fill: false,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 2.5
-      }
-    ];
-  } else if (currentChartTab === 'sugar') {
-    datasets = [
-      {
-        label: 'Blood Sugar (mg/dL)',
-        data: history.map(h => h.sugar),
-        borderColor: '#16a34a',
-        backgroundColor: 'rgba(22, 163, 74, 0.12)',
-        tension: 0.35,
-        fill: true,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3
-      }
-    ];
-  } else if (currentChartTab === 'hr') {
-    datasets = [
-      {
-        label: 'Heart Rate (bpm)',
-        data: history.map(h => h.hr),
-        borderColor: '#e11d48',
-        backgroundColor: 'rgba(225, 29, 72, 0.1)',
-        tension: 0.35,
-        fill: true,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 3
-      }
-    ];
+  const ctx = canvas.getContext('2d');
+  if (chartInstance) {
+    chartInstance.destroy();
   }
 
-  if (vitalsChartInstance) {
-    vitalsChartInstance.data.labels = labels;
-    vitalsChartInstance.data.datasets = datasets;
-    vitalsChartInstance.update();
-  } else {
-    vitalsChartInstance = new Chart(canvas, {
+  if (activeChartType === 'bp') {
+    const systolicData = history.map(h => h.systolic);
+    const diastolicData = history.map(h => h.diastolic);
+
+    chartInstance = new Chart(ctx, {
       type: 'line',
-      data: { labels, datasets },
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: currentLang === 'ta' ? 'மேல் அளவு (Systolic)' : 'Systolic BP (mmHg)',
+            data: systolicData,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.12)',
+            borderWidth: 3,
+            pointBackgroundColor: '#1d4ed8',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            tension: 0.35,
+            fill: true
+          },
+          {
+            label: currentLang === 'ta' ? 'கீழ் அளவு (Diastolic)' : 'Diastolic BP (mmHg)',
+            data: diastolicData,
+            borderColor: '#818cf8',
+            backgroundColor: 'rgba(129, 140, 248, 0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#6366f1',
+            pointRadius: 4,
+            tension: 0.35,
+            fill: true
+          }
+        ]
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, font: { weight: 'bold', size: 11 } } },
+          legend: {
+            position: 'top',
+            labels: {
+              font: { family: 'Inter', weight: 'bold', size: 12 }
+            }
+          },
           tooltip: {
             backgroundColor: '#0f172a',
-            padding: 10,
-            titleFont: { size: 12, weight: 'bold' },
-            bodyFont: { size: 12 }
+            padding: 12,
+            cornerRadius: 12,
+            titleFont: { size: 13, weight: 'bold' }
           }
         },
         scales: {
           y: {
-            grid: { color: 'rgba(148, 163, 184, 0.15)' },
-            ticks: { font: { size: 11 } }
+            min: 60,
+            max: 160,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { weight: 'bold' } }
           },
           x: {
             grid: { display: false },
-            ticks: { font: { size: 11 } }
+            ticks: { font: { weight: 'bold' } }
+          }
+        }
+      }
+    });
+  } else {
+    // Blood Sugar Chart
+    const sugarData = history.map(h => h.blood_sugar);
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: currentLang === 'ta' ? 'ரத்த சர்க்கரை (mg/dL)' : 'Blood Sugar (mg/dL)',
+            data: sugarData,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            borderWidth: 3,
+            pointBackgroundColor: '#d97706',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            tension: 0.35,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              font: { family: 'Inter', weight: 'bold', size: 12 }
+            }
+          }
+        },
+        scales: {
+          y: {
+            min: 70,
+            max: 180,
+            grid: { color: '#f1f5f9' }
+          },
+          x: {
+            grid: { display: false }
           }
         }
       }
@@ -811,466 +1107,19 @@ function renderVitalsChart() {
   }
 }
 
-function switchChartTab(tab) {
-  currentChartTab = tab;
-  ['bp', 'sugar', 'hr'].forEach(t => {
-    const btn = document.getElementById(`tab-chart-${t}`);
-    if (btn) {
-      if (t === tab) {
-        btn.className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-slate-600 text-sky-700 dark:text-sky-300 shadow-xs font-bold';
-      } else {
-        btn.className = 'px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 font-medium';
-      }
+// ================= APP INITIALIZATION =================
+document.addEventListener('DOMContentLoaded', () => {
+  setLanguage(currentLang);
+  navigateTo(currentRole || 'portal_select');
+  startRealtimeSync();
+
+  // Handle ESC key to close open modals
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      cancelPanicCountdown();
+      closeVoiceCheckinModal();
+      closeNudgeModal();
+      closeCallModal();
     }
   });
-  renderVitalsChart();
-}
-
-// ==========================================
-// 4. ACTION HANDLERS
-// ==========================================
-
-// Perform Big One-Tap Check-In
-async function performSeniorCheckIn(voiceMessage = null) {
-  ensureAudioReady();
-  playSound('checkin');
-
-  try {
-    const res = await fetch('/api/check-in', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ voiceMessage })
-    });
-    const result = await res.json();
-    if (result.success) {
-      if (!voiceMessage) {
-        speakText("Good morning, Eleanor! We've let David and your family know you are awake and doing well.");
-      }
-    }
-  } catch (err) {
-    console.error('Check-in failed:', err);
-  }
-}
-
-function reCheckIn() {
-  performSeniorCheckIn();
-}
-
-function sendMoodNote(mood) {
-  ensureAudioReady();
-  playSound('pop');
-  fetch('/api/timeline/note', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      author: 'Eleanor Vance (Senior)',
-      text: `Mood check-in: "${mood}"`
-    })
-  });
-  speakText(`Thank you Eleanor, your family received your note: ${mood}`);
-}
-
-// Toggle Medication Taken
-async function toggleMedication(id) {
-  ensureAudioReady();
-  playSound('pill');
-  try {
-    await fetch(`/api/medication/${id}/toggle`, { method: 'POST' });
-  } catch (err) {
-    console.error('Toggle medication failed:', err);
-  }
-}
-
-// Submit Vitals Form
-function handleSeniorVitalsSubmit(event) {
-  event.preventDefault();
-  ensureAudioReady();
-  const sys = document.getElementById('vital-bp-sys').value;
-  const dia = document.getElementById('vital-bp-dia').value;
-  const temp = document.getElementById('vital-temp').value;
-  const sugar = document.getElementById('vital-sugar').value;
-  const hr = document.getElementById('vital-hr').value;
-
-  submitVitalsData(sys, dia, temp, sugar, hr);
-}
-
-async function submitVitalsData(systolic, diastolic, temperature, bloodSugar, heartRate) {
-  playSound('vitals');
-  try {
-    const res = await fetch('/api/vitals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systolic: Number(systolic),
-        diastolic: Number(diastolic),
-        temperature: Number(temperature),
-        bloodSugar: Number(bloodSugar),
-        heartRate: Number(heartRate)
-      })
-    });
-    const result = await res.json();
-    if (result.success) {
-      // Show visual confirmation toast in Senior View
-      const toast = document.getElementById('senior-vitals-toast');
-      const toastMsg = document.getElementById('senior-vitals-toast-msg');
-      if (toast) {
-        if (result.anomalies && result.anomalies.length > 0) {
-          toast.className = 'p-4 rounded-2xl bg-amber-100 dark:bg-amber-950/80 border-2 border-amber-400 text-amber-900 dark:text-amber-200 font-bold text-center flex items-center justify-center gap-2';
-          if (toastMsg) toastMsg.textContent = `⚠️ Vitals recorded with notice: ${result.anomalies[0]}. David Vance notified.`;
-        } else {
-          toast.className = 'p-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 border-2 border-emerald-400 text-emerald-900 dark:text-emerald-200 font-bold text-center flex items-center justify-center gap-2';
-          if (toastMsg) toastMsg.textContent = '✅ Vitals successfully recorded and shared with Dr. Smith & David!';
-        }
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 4500);
-      }
-
-      if (result.anomalies && result.anomalies.length > 0) {
-        speakText(`Vitals recorded with notice: ${result.anomalies[0]}. Your caregiver has been alerted.`);
-      } else {
-        speakText("Thank you Eleanor. Your health vitals are recorded and look great!");
-      }
-    }
-  } catch (err) {
-    console.error('Save vitals error:', err);
-  }
-}
-
-function adjustInput(id, delta) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const cur = parseFloat(el.value) || 0;
-  el.value = (cur + delta).toFixed(1);
-}
-
-// Trigger Emergency SOS Panic Button
-async function triggerEmergencySOS() {
-  ensureAudioReady();
-  playSound('alert');
-
-  // Open the SOS modal
-  const modal = document.getElementById('sos-modal');
-  if (modal) modal.classList.remove('hidden');
-
-  try {
-    await fetch('/api/alert', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        source: 'Senior Emergency Button',
-        message: 'EMERGENCY SOS: Eleanor pressed the Help button. Immediate caregiver check required!'
-      })
-    });
-  } catch (err) {
-    console.error('SOS dispatch error:', err);
-  }
-}
-
-function closeSosModal() {
-  const modal = document.getElementById('sos-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-// Resolve Alert
-async function resolveCurrentAlert(resolvedBy = 'David Vance') {
-  ensureAudioReady();
-  playSound('success');
-  closeSosModal();
-
-  try {
-    await fetch('/api/alert/resolve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        resolvedBy,
-        note: `Caregiver confirmed Eleanor is safe. Alert cleared.`
-      })
-    });
-    speakText("The alert has been resolved. Status is now all clear.");
-  } catch (err) {
-    console.error('Resolve alert error:', err);
-  }
-}
-
-// Timeline Filtering
-function filterTimeline(filter) {
-  timelineFilter = filter;
-  ['all', 'checkin', 'medication', 'vitals', 'alert'].forEach(f => {
-    const btn = document.getElementById(`tl-filter-${f}`);
-    if (btn) {
-      if (f === filter) {
-        btn.className = 'px-2.5 py-1 rounded-lg bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 font-bold';
-      } else {
-        btn.className = 'px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 font-medium';
-      }
-    }
-  });
-  renderCaregiverTimeline();
-}
-
-// Save Escalation Rules
-async function saveEscalationRules(event) {
-  event.preventDefault();
-  const rules = {
-    morningDeadline: document.getElementById('rule-deadline').value,
-    maxDelayHours: Number(document.getElementById('rule-max-delay').value),
-    sysBpThresholdMax: Number(document.getElementById('rule-sys-max').value),
-    diaBpThresholdMax: Number(document.getElementById('rule-dia-max').value),
-    bloodSugarThresholdMax: Number(document.getElementById('rule-sugar-max').value),
-    tempThresholdMax: Number(document.getElementById('rule-temp-max').value),
-    notifySms: document.getElementById('rule-sms').checked,
-    notifyCall: document.getElementById('rule-call').checked,
-    notifyEmail: document.getElementById('rule-email').checked
-  };
-
-  try {
-    await fetch('/api/rules', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rules)
-    });
-    const indicator = document.getElementById('rules-save-indicator');
-    if (indicator) {
-      indicator.classList.remove('hidden');
-      setTimeout(() => indicator.classList.add('hidden'), 3000);
-    }
-  } catch (err) {
-    console.error('Save rules error:', err);
-  }
-}
-
-// Caregiver Quick Notes
-async function handleQuickNoteSubmit(event) {
-  event.preventDefault();
-  const input = document.getElementById('quick-note-input');
-  if (!input || !input.value.trim()) return;
-
-  try {
-    await fetch('/api/timeline/note', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        author: 'David Vance (Son)',
-        text: input.value.trim()
-      })
-    });
-    input.value = '';
-  } catch (err) {
-    console.error('Note add error:', err);
-  }
-}
-
-// Add Note Modal Handlers
-function openAddNoteModal() {
-  const modal = document.getElementById('note-modal');
-  if (modal) modal.classList.remove('hidden');
-}
-function closeAddNoteModal() {
-  const modal = document.getElementById('note-modal');
-  if (modal) modal.classList.add('hidden');
-}
-async function handleModalNoteSubmit(event) {
-  event.preventDefault();
-  const author = document.getElementById('note-author-input').value;
-  const text = document.getElementById('note-text-input').value;
-
-  try {
-    await fetch('/api/timeline/note', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ author, text })
-    });
-    closeAddNoteModal();
-    document.getElementById('note-text-input').value = '';
-  } catch (err) {
-    console.error('Modal note submit failed:', err);
-  }
-}
-
-// ==========================================
-// 5. INTERACTIVE HACKATHON SIMULATOR
-// ==========================================
-
-async function triggerSimulation(action) {
-  ensureAudioReady();
-  try {
-    const res = await fetch('/api/simulate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action })
-    });
-    const result = await res.json();
-    if (result.success) {
-      if (action === 'missed_checkin') {
-        playSound('pop');
-        speakText("Notice: Morning check-in has not been received. Please confirm you are okay.");
-      } else if (action === 'no_response' || action === 'panic') {
-        playSound('alert');
-      } else if (action === 'routine_complete' || action === 'reset') {
-        playSound('success');
-      }
-    }
-  } catch (err) {
-    console.error('Simulation trigger failed:', err);
-  }
-}
-
-async function triggerTimeSimulation(time) {
-  ensureAudioReady();
-  playSound('pop');
-  try {
-    const res = await fetch('/api/simulate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'time_travel', time })
-    });
-    const result = await res.json();
-    if (result.success) {
-      speakText(`Time simulated to ${time}. Routine schedule adjusted.`);
-    }
-  } catch (err) {
-    console.error('Time simulation error:', err);
-  }
-}
-
-// ==========================================
-// 6. TELEPHONY & SMS SIMULATOR MODALS
-// ==========================================
-
-function simulateCall(name, number, role) {
-  ensureAudioReady();
-  playSound('pill');
-  const modal = document.getElementById('call-modal');
-  const nameEl = document.getElementById('call-modal-name');
-  const numEl = document.getElementById('call-modal-number');
-  const statusEl = document.getElementById('call-modal-status');
-
-  if (nameEl) nameEl.textContent = name;
-  if (numEl) numEl.textContent = `${number} • ${role}`;
-  if (statusEl) statusEl.textContent = 'Calling... Ringing mobile line';
-  if (modal) modal.classList.remove('hidden');
-
-  setTimeout(() => {
-    if (statusEl) statusEl.textContent = 'Connected (00:01) • HD Voice Active';
-  }, 1800);
-}
-
-function closeCallModal() {
-  const modal = document.getElementById('call-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function openSmsModal(name, phone) {
-  const modal = document.getElementById('sms-modal');
-  const recipientEl = document.getElementById('sms-modal-recipient');
-  const phoneEl = document.getElementById('sms-modal-phone');
-  const previewEl = document.getElementById('sms-preview-text');
-
-  if (recipientEl) recipientEl.textContent = `SMS to ${name}`;
-  if (phoneEl) phoneEl.textContent = phone;
-  if (previewEl && appState) {
-    previewEl.textContent = `[CareConnect Alert]: Status update for Eleanor Vance: ${appState.status.message}`;
-  }
-  if (modal) modal.classList.remove('hidden');
-}
-
-function closeSmsModal() {
-  const modal = document.getElementById('sms-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function handleSendCustomSms(event) {
-  event.preventDefault();
-  ensureAudioReady();
-  playSound('pop');
-  const text = document.getElementById('custom-sms-text').value;
-  if (text.trim()) {
-    fetch('/api/timeline/note', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        author: 'SMS Gateway Dispatch',
-        text: `Sent SMS: "${text}"`
-      })
-    });
-  }
-  closeSmsModal();
-  document.getElementById('custom-sms-text').value = '';
-}
-
-// ==========================================
-// 7. VIEW SWITCHING & ACCESSIBILITY CONTROLS
-// ==========================================
-
-function switchView(view) {
-  currentView = view;
-  const seniorView = document.getElementById('senior-view');
-  const caregiverView = document.getElementById('caregiver-view');
-  const btnSenior = document.getElementById('nav-btn-senior');
-  const btnCg = document.getElementById('nav-btn-caregiver');
-  const btnSplit = document.getElementById('nav-btn-split');
-  const container = document.getElementById('app-container');
-
-  if (view === 'senior') {
-    seniorView.classList.remove('hidden');
-    caregiverView.classList.add('hidden');
-    container.className = 'flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 pb-32';
-
-    btnSenior.className = 'px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-sm';
-    btnCg.className = 'px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
-    btnSplit.className = 'px-3 py-2 rounded-lg font-bold text-xs sm:text-sm hidden md:flex items-center gap-1.5 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white';
-  } else if (view === 'caregiver') {
-    seniorView.classList.add('hidden');
-    caregiverView.classList.remove('hidden');
-    container.className = 'flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-32';
-
-    btnSenior.className = 'px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
-    btnCg.className = 'px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-sm';
-    btnSplit.className = 'px-3 py-2 rounded-lg font-bold text-xs sm:text-sm hidden md:flex items-center gap-1.5 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white';
-
-    if (vitalsChartInstance) {
-      setTimeout(() => vitalsChartInstance.resize(), 50);
-    }
-  } else if (view === 'split') {
-    // Side-by-side presentation view for evaluators!
-    seniorView.classList.remove('hidden');
-    caregiverView.classList.remove('hidden');
-    container.className = 'flex-1 max-w-[1700px] w-full mx-auto p-4 sm:p-6 pb-32 grid grid-cols-1 xl:grid-cols-2 gap-8 items-start';
-
-    btnSenior.className = 'px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all text-slate-600 dark:text-slate-300';
-    btnCg.className = 'px-4 py-2 rounded-lg font-bold text-sm sm:text-base flex items-center gap-2 transition-all text-slate-600 dark:text-slate-300';
-    btnSplit.className = 'px-3 py-2 rounded-lg font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-sm';
-
-    if (vitalsChartInstance) {
-      setTimeout(() => vitalsChartInstance.resize(), 50);
-    }
-  }
-}
-
-function changeFontSize(size, save = true) {
-  document.body.classList.remove('font-size-sm', 'font-size-md', 'font-size-lg');
-  document.body.classList.add(`font-size-${size}`);
-  if (save) localStorage.setItem('careconnect_font', size);
-}
-
-function toggleHighContrast() {
-  document.body.classList.toggle('high-contrast');
-  const isHc = document.body.classList.contains('high-contrast');
-  localStorage.setItem('careconnect_contrast', isHc ? 'true' : 'false');
-}
-
-function toggleDarkMode() {
-  document.documentElement.classList.toggle('dark');
-  const isDark = document.documentElement.classList.contains('dark');
-  localStorage.setItem('careconnect_dark', isDark ? 'true' : 'false');
-  const icon = document.getElementById('dark-icon');
-  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
-  if (vitalsChartInstance) vitalsChartInstance.update();
-}
-
-function toggleAudio() {
-  isAudioEnabled = !isAudioEnabled;
-  const icon = document.getElementById('audio-icon');
-  if (icon) icon.textContent = isAudioEnabled ? '🔊' : '🔇';
-  if (isAudioEnabled) playSound('pill');
-}
+});
